@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#011020">
+<meta name="description" content="Settings for the Heartbeat Scanner over Bluetooth: colours, preset themes, range, cone, sweep, brightness and mounting.">
+<title>Heartbeat Scanner settings</title>
+<!-- Heartbeat Scanner phone settings page. One self-contained file: no build step,
+     nothing loaded from the internet. Hosted at /watch/scanner/ next to the Watch MK1
+     page; manifest.webmanifest + sw.js beside it make it an installable offline app
+     whose scope (/watch/scanner/) is separate from the watch's.
+     Add ?demo to the address to try it with a pretend scanner. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23011020'/%3E%3Cpath d='M32 52 10 22a34 34 0 0 1 44 0z' fill='%2310454a' stroke='%233daea0' stroke-width='3'/%3E%3Ccircle cx='38' cy='28' r='5' fill='%23f80000'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{color-scheme:dark;--bg:#011020;--panel:#06182a;--panel2:#0b2236;--line:#1b4a5e;--text:#e6f4f8;--soft:#8fb2be;--accent:#a0fcf8;--accent2:#f8a400;--hot:#f80000;--ok:#4bd18b;--bad:#ff5a4a;--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace;--radius:12px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 var(--font);-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:calc(72px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% -20%,color-mix(in srgb,var(--accent) 14%,var(--bg)) 0,var(--bg) 60%) fixed}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--accent) 4%,transparent) 0 1px,transparent 1px 4px)}
+h1,h2{font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin:0;font-weight:700}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--accent)}
+header svg{width:30px;height:30px;flex:none}
+.pill{font:12px var(--mono);padding:4px 9px;border-radius:999px;border:1px solid var(--line);color:var(--soft);white-space:nowrap;text-transform:uppercase}
+.pill.on{color:var(--ok);border-color:var(--ok)}.pill.demo{color:var(--accent2);border-color:var(--accent2)}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--panel) 94%,transparent);border-top:1px solid var(--line);backdrop-filter:blur(8px)}
+nav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:var(--soft);text-decoration:none;font:11px var(--mono);text-transform:uppercase;border-radius:10px}
+nav a svg{width:22px;height:22px}
+nav a[aria-current="page"]{color:var(--accent);background:var(--panel2)}
+main{max-width:620px;margin:0 auto;padding:12px 14px}
+#stage{position:sticky;top:calc(51px + env(safe-area-inset-top));z-index:4;display:flex;align-items:center;gap:12px;padding:8px 10px;margin:0 0 12px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:var(--radius)}
+#stage canvas{width:176px;height:176px;border-radius:50%;flex:none;box-shadow:0 0 0 4px #1a1c1f,0 0 0 5px #333,0 0 18px color-mix(in srgb,var(--accent) 25%,transparent);image-rendering:auto;background:#000}
+#stage .meta{flex:1;min-width:0;font:12px/1.5 var(--mono);color:var(--soft)}
+#stage .meta b{color:var(--text);font-weight:600}
+#stage .meta .note{color:var(--accent2)}
+@media (max-height:520px){#stage{position:static}}   /* landscape phones: a pinned 194 px preview left only ~40 px to scroll the controls in */
+section{display:none}section.show{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);padding:14px;margin:0 0 12px}
+.card h2{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:var(--accent)}
+.card h2 small{font:12px var(--font);color:var(--soft);text-transform:none;letter-spacing:0;margin-left:auto}
+.row{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.row:first-of-type{border-top:0}
+.row label,.row .lbl{flex:1;min-width:0}
+.row .val{color:var(--accent);font:14px var(--mono);min-width:4.2em;text-align:right}
+.slider{display:block;padding:6px 0 4px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.slider:first-of-type{border-top:0}
+.slider .top{display:flex;justify-content:space-between;gap:8px}
+.slider .val{color:var(--accent);font:14px var(--mono)}
+input[type=range]{width:100%;accent-color:var(--accent);height:34px;margin:0}
+.sub{color:var(--soft);font-size:13px}
+.hint{color:var(--soft);font-size:13px;margin:6px 0 0}
+.warnnote{color:var(--accent2);font-size:13px;margin:4px 0 0}
+button{font:700 14px var(--mono);text-transform:uppercase;letter-spacing:.05em;min-height:44px;padding:0 14px;border-radius:var(--radius);border:1px solid var(--accent);background:var(--accent);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--accent)}
+button.warn{background:transparent;color:var(--bad);border-color:var(--bad)}
+button.small{min-height:34px;padding:0 10px;font-size:12px}
+button:disabled{opacity:.4;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btns>*{flex:1 1 auto}
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.presets button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;min-height:0;background:var(--panel2);border:1px solid var(--line);color:var(--text);font:600 11px var(--mono);text-transform:none;letter-spacing:0}
+.presets button canvas{width:80px;height:80px;border-radius:50%}
+.presets button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 12px color-mix(in srgb,var(--accent) 35%,transparent)}
+.colrow{display:flex;align-items:center;gap:10px;min-height:44px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.colrow:first-child{border-top:0}
+.colrow label{flex:1;font-size:14px}
+.colrow code{font:12px var(--mono);color:var(--soft)}
+input[type=color]{width:44px;height:32px;border:1px solid var(--line);border-radius:8px;background:none;padding:1px;cursor:pointer}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;border-radius:0;background:transparent;color:var(--soft);min-height:40px;font-size:13px;padding:0 6px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--bg)}
+.switch{position:relative;width:50px;height:30px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;z-index:1;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--panel2);border:1px solid var(--line);transition:.15s}
+.switch span::after{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:var(--soft);transition:.15s}
+.switch input:checked+span{background:var(--accent);border-color:var(--accent)}
+.switch input:checked+span::after{transform:translateX(20px);background:var(--bg)}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}   /* the real checkbox is invisible: show focus on the track */
+select,input[type=text],input[type=url]{font:15px var(--font);color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;min-height:40px;padding:0 10px;max-width:100%}
+input[type=url]{width:100%}
+.pin{display:flex;gap:8px}
+.pin input{flex:1;font:28px var(--mono);letter-spacing:.3em;text-align:center;min-width:0}
+.notice{border:1px solid var(--accent2);color:var(--text);border-radius:var(--radius);padding:12px;margin:0 0 12px;font-size:14px;background:color-mix(in srgb,var(--accent2) 8%,transparent)}
+.steps{margin:6px 0 0;padding-left:20px;font-size:14px}.steps li{margin:3px 0}
+.upd{position:fixed;left:50%;bottom:calc(132px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;max-width:90vw;box-shadow:0 8px 30px #000a}
+#verfoot{text-align:center;color:var(--soft);font-size:12px;padding:0 14px 10px}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9;background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:9px 14px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+#toast.show{opacity:1}#toast.bad{border-color:var(--bad)}
+#log{font:11px/1.4 var(--mono);color:var(--soft);white-space:pre-wrap;max-height:200px;overflow:auto;margin:6px 0 0}
+a{color:var(--accent)}
+.linkcard{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.linkcard svg{width:34px;height:34px;flex:none}
+.muted{opacity:.55}
+</style>
+</head>
+<body>
+<header>
+  <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="var(--panel2)" stroke="var(--line)" stroke-width="3"/><path d="M32 50 13 24a30 30 0 0 1 38 0z" fill="color-mix(in srgb,var(--accent) 25%,transparent)" stroke="var(--accent)" stroke-width="2.5"/><circle cx="38" cy="30" r="4.5" fill="var(--hot)"/><path d="M32 44l-4 7h8z" fill="var(--accent)"/></svg>
+  <h1 id="title">Heartbeat Scanner</h1>
+  <span class="pill" id="pill">offline</span>
+</header>
+<main>
+<div id="stage">
+  <canvas id="preview" width="240" height="240" aria-label="Live preview of the scanner screen"></canvas>
+  <div class="meta" id="stageMeta"></div>
+</div>
+
+<section id="connect">
+  <div class="notice" id="nobt" hidden></div>
+  <div class="card">
+    <h2>Connect <small id="connsub">not connected</small></h2>
+    <ol class="steps" id="connhelp">
+      <li>Switch the scanner on. The first time (and until a phone is paired) it shows a <b>QR code and a 6-digit PIN</b> for 2 minutes.</li>
+      <li>Any other time: <b>hold BOOT for 1 second</b> (through the lid window beside the USB-C port) to show them again.</li>
+      <li>Tap <b>Connect scanner</b>, pick <b>HB SCANNER</b>, type the PIN. Next time the PIN is not needed: this phone is remembered (the scanner remembers its last 4 phones), you only wake the scanner's Bluetooth.</li>
+    </ol>
+    <div class="btns">
+      <button id="btnConnect">Connect scanner</button>
+      <button class="ghost" id="btnPick" hidden>Choose another scanner</button>
+      <button class="ghost" id="btnDemo">Try demo</button>
+    </div>
+    <div id="pinbox" hidden>
+      <p class="sub">Type the PIN shown on the scanner:</p>
+      <div class="pin"><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN"><button id="btnPin">Pair</button></div>
+    </div>
+    <div class="btns" id="connected" hidden>
+      <button class="ghost" id="btnRefresh">Refresh</button>
+      <button class="warn" id="btnDisconnect">Disconnect</button>
+    </div>
+    <p class="hint">Bluetooth on the scanner switches itself off 2 minutes after power-on (or after holding BOOT) to save battery. It stays on while this page is connected. In Chrome (with its Bluetooth flags on) and Bluefy, open this page within those 2 minutes and it reconnects by itself.</p>
+  </div>
+  <div class="card" id="installCard" hidden>
+    <h2>Install</h2>
+    <p class="sub">Add this page to the home screen: it opens like an app and works offline.</p>
+    <div class="btns"><button id="btnInstall">Install app</button></div>
+  </div>
+  <div class="card">
+    <a class="linkcard" href="../" id="watchLink">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="var(--accent)" stroke-width="4"/><path d="M32 17v15l9 6" stroke="var(--text)" stroke-width="4" stroke-linecap="round" fill="none"/></svg>
+      <span><b>Watch MK1 settings</b><br><span class="sub">The other page in this kit</span></span>
+    </a>
+  </div>
+</section>
+
+<section id="look">
+  <div class="card">
+    <h2>Preset themes <small id="presetName"></small></h2>
+    <div class="presets" id="presets"></div>
+    <p class="hint">Original colour schemes inspired by each style; no game artwork is used. A preset changes colours only.</p>
+  </div>
+  <div class="card">
+    <h2>Colours <small>tap a swatch</small></h2>
+    <div id="cols"></div>
+    <p class="hint">The screen shows 65,536 colours, so each pick is rounded to the nearest one it can show (the hex code shows the result).</p>
+  </div>
+</section>
+
+<section id="radar">
+  <div class="card">
+    <h2>Radar</h2>
+    <label class="slider"><span class="top"><span>Range (radius of the cone)</span><span class="val" id="v_range"></span></span>
+      <input type="range" id="range" min="1000" max="6000" step="500" data-key="range"></label>
+    <label class="slider"><span class="top"><span>Cone width</span><span class="val" id="v_fov"></span></span>
+      <input type="range" id="fov" min="40" max="120" step="5" data-key="fov"></label>
+    <label class="slider"><span class="top"><span>Sweep time (left-right-left)</span><span class="val" id="v_sweep"></span></span>
+      <input type="range" id="sweep" min="500" max="6000" step="100" data-key="sweep"></label>
+    <label class="slider"><span class="top"><span>Contact linger (after the radar loses someone)</span><span class="val" id="v_linger"></span></span>
+      <input type="range" id="linger" min="200" max="5000" step="50" data-key="linger"></label>
+    <label class="slider"><span class="top"><span>CLOSE warning under</span><span class="val" id="v_close"></span></span>
+      <input type="range" id="close" min="0" max="6000" step="100" data-key="close"></label>
+    <p class="hint">The LD2450 sees about 6 m and 120&deg;. A shorter range zooms in; people beyond it are not shown.</p>
+  </div>
+  <div class="card">
+    <h2>Brightness</h2>
+    <label class="slider"><span class="top"><span id="brightLabel">Screen brightness (software)</span><span class="val" id="v_bright"></span></span>
+      <input type="range" id="bright" min="10" max="100" step="5" data-key="bright"></label>
+    <p class="warnnote" id="brightNote">This only darkens the colours. The 7-pin display has no backlight pin, so the backlight stays fully on and this does <b>not</b> save battery.</p>
+  </div>
+</section>
+
+<section id="mount">
+  <div class="card">
+    <h2>Screen rotation</h2>
+    <div class="seg" id="rotSeg" role="group" aria-label="Rotation">
+      <button data-rot="0">0&deg;</button><button data-rot="1">90&deg;</button><button data-rot="2">180&deg;</button><button data-rot="3">270&deg;</button>
+    </div>
+    <p class="hint"><b>270&deg; (3)</b> for the default left-arm case, <b>90&deg; (1)</b> for the right-arm case. The top of the cone must point away from your body, out of the radar window. If it points at your hand or elbow, try the other of 90/270; if it points at your body, add 180&deg;. The preview above is always drawn upright.</p>
+  </div>
+  <div class="card">
+    <h2>Mirror</h2>
+    <div class="row"><label for="mirror">Swap left and right</label><span class="switch"><input type="checkbox" id="mirror"><span></span></span></div>
+    <p class="hint">Only if someone standing toward your hand shows up on the wrong side.</p>
+  </div>
+</section>
+
+<section id="device">
+  <div class="card">
+    <h2>Bluetooth at power-on</h2>
+    <label for="bootpair" class="sub">When the scanner is switched on:</label>
+      <select id="bootpair" style="width:100%;margin-top:6px">
+        <option value="3">Auto: pairing screen until a phone is paired</option>
+        <option value="2">Always show the pairing screen first</option>
+        <option value="1">Radar at once, Bluetooth on 2 min</option>
+        <option value="0">Bluetooth off (hold BOOT to pair)</option>
+      </select>
+    <p class="hint">Whatever you pick, holding BOOT for 1 second opens pairing for 2 minutes, and a short press goes back to the radar.</p>
+  </div>
+  <div class="card">
+    <h2>QR code address</h2>
+    <input type="url" id="url" placeholder="https://talkinmuffin.github.io/watch/scanner/" aria-label="Page address for the QR code">
+    <div class="btns"><button class="small" id="btnUrl" data-need>Save</button><button class="small ghost" id="btnUrlReset" data-need>Default</button></div>
+  </div>
+  <div class="card">
+    <h2>Phones &amp; reset</h2>
+    <div class="row"><span class="lbl">Paired phones</span><span class="val" id="phones">-</span></div>
+    <div class="row"><span class="lbl">Firmware</span><span class="val" id="fw">-</span></div>
+    <div class="btns">
+      <button class="warn small" id="btnForget" data-need>Forget all phones</button>
+      <button class="warn small" id="btnDefaults" data-need>Original look</button>
+    </div>
+    <p class="hint">"Original look" puts colours, range, cone, sweep, linger, brightness and the CLOSE distance back to how the scanner first shipped. Rotation and mirror are kept.</p>
+  </div>
+  <div class="card">
+    <h2>Link log</h2>
+    <details><summary class="sub">Show</summary><div id="log"></div></details>
+  </div>
+</section>
+</main>
+<footer id="verfoot">Heartbeat Scanner settings page <span id="verTxt"></span></footer>
+<nav id="nav"></nav>
+<button class="upd" id="btnUpd" hidden>New version ready: tap to reload</button>
+<div id="toast" role="status" aria-live="polite"></div>
+<script id="scan-proto">
+/* ===== ScanProto: protocol + settings logic shared by the page, demo mode and the tests =====
+   No DOM in here. tests/test_page_protocol.mjs loads this exact <script> block in Node
+   and runs it against the scanner firmware's own command parser (scancmd.cpp). */
+(function (root) {
+  'use strict';
+  const P = {};
+  P.SVC = '4f8b0001-2d1c-4e7a-9b3f-6a1c2e9d5b01';
+  P.RX = '4f8b0002-2d1c-4e7a-9b3f-6a1c2e9d5b01';
+  P.TX = '4f8b0003-2d1c-4e7a-9b3f-6a1c2e9d5b01';
+  P.NAME = 'HB SCANNER';
+  P.FIRST = 0x80; P.LAST = 0x40; P.SEQ = 0x3f;
+  P.PAGE_URL = 'https://talkinmuffin.github.io/watch/scanner/';
+  const enc = new TextEncoder(), dec = new TextDecoder();
+
+  // ---- framing (mirror of bleframe.cpp) ----
+  P.encode = function (text, chunkMax) {
+    const b = enc.encode(text);
+    chunkMax = Math.min(chunkMax, 512);
+    if (chunkMax < 2) throw new Error('chunk too small');
+    const per = chunkMax - 1, out = [];
+    let pos = 0, n = 0;
+    do {
+      const k = Math.min(per, b.length - pos);
+      const c = new Uint8Array(k + 1);
+      let h = n & P.SEQ;
+      if (pos === 0) h |= P.FIRST;
+      if (pos + k >= b.length) h |= P.LAST;
+      c[0] = h; c.set(b.subarray(pos, pos + k), 1);
+      out.push(c); pos += k; n++;
+    } while (pos < b.length);
+    return out;
+  };
+  P.Reassembler = class {
+    constructor(cap) { this.cap = cap || 16384; this.reset(); this.error = ''; }
+    reset() { this.parts = []; this.len = 0; this.next = 0; this.active = false; }
+    fail(why) { this.error = why; this.reset(); return { type: 'error', error: why }; }
+    feed(u8) {
+      if (!u8 || !u8.length) return this.fail('empty chunk');
+      const h = u8[0];
+      if (h & P.FIRST) { this.reset(); this.active = true; }
+      else if (!this.active) return this.fail('chunk without start');
+      if ((h & P.SEQ) !== this.next) return this.fail('chunk out of order');
+      if (this.len + u8.length - 1 + 1 > this.cap) return this.fail('message too long');
+      this.parts.push(u8.slice(1)); this.len += u8.length - 1;
+      this.next = (this.next + 1) & P.SEQ;
+      if (h & P.LAST) {
+        const all = new Uint8Array(this.len); let o = 0;
+        for (const p of this.parts) { all.set(p, o); o += p.length; }
+        this.reset();
+        return { type: 'message', text: dec.decode(all) };
+      }
+      return { type: 'none' };
+    }
+  };
+  P.parseJson = function (reply) {
+    if (!reply.startsWith('OK ')) throw new Error(reply);
+    return JSON.parse(reply.slice(3));
+  };
+
+  // ---- settings (mirror of scan_settings.cpp) ----
+  P.COLS = ['bg', 'bezel', 'ring', 'ring2', 'fov', 'grid', 'text', 'text2', 'sweep', 'sweep2', 'player', 'blip', 'core', 'halo', 'warn'];
+  P.COL_LABEL = { bg: 'Background', bezel: 'Bezel (outside the glass)', ring: 'Range rings', ring2: 'Outer ring + cone edges', fov: 'Cone fill',
+    grid: 'Inner bezel line', text: 'Text', text2: 'Dim text + range labels', sweep: 'Sweep line', sweep2: 'Sweep trail', player: 'You (chevron)',
+    blip: 'Contact', core: 'Contact centre', halo: 'Contact halo', warn: 'CLOSE warning' };
+  P.NUM = [['range', 1000, 6000], ['fov', 40, 120], ['sweep', 500, 6000], ['linger', 200, 5000], ['bright', 10, 100],
+    ['rot', 0, 3], ['mirror', 0, 1], ['close', 0, 6000], ['bootpair', 0, 3]];
+  P.LIMIT = {}; for (const [k, lo, hi] of P.NUM) P.LIMIT[k] = [lo, hi];
+  P.PRESET_IDS = ['cyan', 'cod', 'mech', 'titan', 'night'];
+  P.PRESET_NAME = { cyan: 'Blue phosphor', cod: 'Classic green', mech: 'Auspex (Mechanicus)', titan: 'Pilot HUD (Titanfall)', night: 'Red night' };
+  const RGB = (r, g, b) => ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+  P.rgb565 = RGB;
+  // order as P.COLS; values are RGB565 like the firmware's table
+  P.PRESETS = {
+    cyan: [0x00C4, 0x10A3, 0x1B8C, 0x3D74, 0x1229, 0x2C70, 0x6E7C, 0x3C6F, 0xA7FF, 0x3D17, 0x07FF, 0xF800, 0xFFFF, 0xC084, 0xFD20],
+    cod: [RGB(2, 12, 4), RGB(16, 20, 16), RGB(30, 106, 42), RGB(60, 176, 74), RGB(12, 52, 20), RGB(40, 108, 52),
+      RGB(140, 240, 156), RGB(60, 144, 80), RGB(200, 255, 200), RGB(60, 154, 72), RGB(80, 255, 106),
+      RGB(255, 40, 24), RGB(255, 255, 255), RGB(140, 24, 16), RGB(255, 210, 60)],
+    mech: [RGB(18, 4, 4), RGB(42, 26, 12), RGB(106, 74, 28), RGB(180, 138, 60), RGB(44, 16, 8), RGB(90, 58, 24),
+      RGB(230, 200, 140), RGB(154, 122, 72), RGB(255, 220, 140), RGB(138, 90, 36), RGB(208, 40, 24),
+      RGB(80, 255, 100), RGB(230, 255, 230), RGB(20, 90, 32), RGB(255, 60, 30)],
+    titan: [RGB(6, 10, 16), RGB(26, 32, 40), RGB(58, 78, 96), RGB(138, 166, 188), RGB(14, 26, 38), RGB(44, 60, 76),
+      RGB(230, 242, 250), RGB(120, 144, 164), RGB(255, 140, 30), RGB(138, 74, 20), RGB(40, 220, 255),
+      RGB(255, 74, 30), RGB(255, 240, 220), RGB(138, 36, 16), RGB(255, 210, 0)],
+    night: [RGB(0, 0, 0), RGB(10, 0, 0), RGB(58, 0, 0), RGB(106, 8, 6), RGB(22, 0, 0), RGB(42, 0, 0),
+      RGB(192, 32, 16), RGB(106, 16, 8), RGB(255, 48, 24), RGB(90, 12, 6), RGB(176, 24, 8),
+      RGB(255, 96, 32), RGB(255, 176, 144), RGB(96, 16, 6), RGB(255, 128, 32)],
+  };
+  P.expand = c => {
+    const r5 = c >> 11, g6 = (c >> 5) & 63, b5 = c & 31;
+    return [(r5 << 3) | (r5 >> 2), (g6 << 2) | (g6 >> 4), (b5 << 3) | (b5 >> 2)];
+  };
+  P.toHex = c => '#' + P.expand(c).map(v => v.toString(16).padStart(2, '0')).join('');
+  P.parseHex = s => {                           // "#rrggbb" or "rrggbb" -> 565, or null
+    s = String(s); if (s[0] === '#') s = s.slice(1);
+    if (!/^[0-9a-fA-F]{6}$/.test(s)) return null;
+    return RGB(parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16));
+  };
+  P.quantize = s => { const c = P.parseHex(s); return c === null ? null : P.toHex(c); };   // what the screen can show
+  P.dim = (c, pct) => {                         // software brightness (scan_settings.cpp ss::dim)
+    if (pct >= 100) return c;
+    if (pct < 0) pct = 0;
+    const [r, g, b] = P.expand(c), f = v => Math.floor((v * pct + 50) / 100);
+    return RGB(f(r), f(g), f(b));
+  };
+  P.defaults = function () {
+    const col = {}; P.COLS.forEach((k, i) => { col[k] = P.toHex(P.PRESETS.cyan[i]); });
+    return { preset: 'cyan', col, range: 6000, fov: 120, sweep: 1800, linger: 750, bright: 100, rot: 3, mirror: 0, close: 1500, bootpair: 3 };
+  };
+  // Palette as the screen shows it (after brightness): {key: '#rrggbb'}
+  P.palette = function (s) {
+    const out = {};
+    for (const k of P.COLS) out[k] = P.toHex(P.dim(P.parseHex(s.col[k]), s.bright));
+    return out;
+  };
+  P.presetOf = function (col) {                 // which preset these colours are, or 'custom'
+    for (const id of P.PRESET_IDS) if (P.COLS.every((k, i) => P.parseHex(col[k]) === P.PRESETS[id][i])) return id;
+    return 'custom';
+  };
+  P.ringLabel = mm => { const dm = Math.floor((mm + 50) / 100); return dm % 10 === 0 ? `${dm / 10}m` : `${Math.floor(dm / 10)}.${dm % 10}m`; };
+
+  // ---- command builders ----
+  P.cmd = {
+    hello: () => 'HELLO',
+    ping: () => 'PING',
+    auth: code => 'AUTH ' + String(code).trim(),
+    get: () => 'GET',
+    set: obj => 'SET ' + Object.entries(obj).map(([k, v]) => (P.COLS.includes(k) && typeof v === 'string' ? 'c.' + k : k) + ' ' + v).join(' '),
+    preset: id => 'PRESET ' + id,
+    defaults: () => 'DEFAULTS',
+    url: u => 'URL ' + (u || 'RESET'),
+    forget: () => 'FORGET',
+    bye: () => 'BYE',
+  };
+
+  // ---- client: one command at a time over any transport ----
+  P.Client = class {
+    constructor(transport) {
+      this.t = transport; this.queue = Promise.resolve(); this.pending = null;
+      this.rx = new P.Reassembler(); this.onEvent = null; this.onLog = null; this.timeoutMs = 8000;
+      this.late = []; this.sync = null;   // commands that timed out {t, json}: their reply may still arrive
+      transport.onChunk = c => this.chunk(c);
+    }
+    // The link has no request ids, so a reply to a command we gave up on (timed out) could be taken for the answer to the NEXT
+    // command. After a timeout the next command is therefore preceded by a PING: the link is in order, so once the PING's own
+    // answer (a JSON "OK {...}") has arrived, every late reply has arrived or been lost. Replies in between are thrown away.
+    async resync() {
+      const now = Date.now();
+      this.late = this.late.filter(l => now - l.t < 20000);
+      if (!this.late.length) return;
+      const need = this.late.filter(l => l.json).length + 1;   // the late JSON answers, then the PING's own
+      this.log('checking the link after a missed reply');
+      await new Promise(res => {
+        let seen = 0;
+        const done = () => { clearTimeout(timer); this.sync = null; res(); };
+        const timer = setTimeout(done, 3000);
+        this.sync = text => { this.log('ignored a reply to an earlier command'); if (/^OK \{/.test(text) && ++seen >= need) done(); };
+        this.t.write(P.encode('PING', this.t.chunkMax || 20)).catch(done);
+      });
+      this.late = [];
+    }
+    chunk(u8) {
+      const r = this.rx.feed(u8);
+      if (r.type === 'error') { this.log('!! ' + r.error); if (this.pending) { const p = this.pending; this.pending = null; p.reject(new Error('link: ' + r.error)); } }
+      if (r.type !== 'message') return;
+      this.log('<- ' + r.text.split('\n')[0].slice(0, 140));
+      if (r.text.startsWith('EVT')) { if (this.onEvent) this.onEvent(r.text); return; }
+      if (this.sync) { this.sync(r.text); return; }
+      if (!this.pending && this.late.length) { this.late.shift(); this.log('late reply to an earlier command arrived'); return; }
+      if (this.pending) { const p = this.pending; this.pending = null; p.resolve(r.text); }
+    }
+    log(s) { if (this.onLog) this.onLog(s); }
+    send(cmd) {
+      const run = async () => { if (this.late.length) await this.resync(); return new Promise((resolve, reject) => {
+        const json = /^(HELLO|PING|GET)(\s|$)/.test(cmd);
+        const timer = setTimeout(() => {
+          if (this.pending) { this.pending = null; this.late.push({ t: Date.now(), json }); if (this.late.length > 4) this.late.shift(); reject(new Error('no reply from the scanner')); }
+        }, this.timeoutMs);
+        this.pending = { resolve: v => { clearTimeout(timer); resolve(v); }, reject: e => { clearTimeout(timer); reject(e); } };
+        this.log('-> ' + (cmd.startsWith('AUTH') ? 'AUTH ******' : cmd));
+        this.t.write(P.encode(cmd, this.t.chunkMax || 20)).catch(e => { if (this.pending) { this.pending = null; clearTimeout(timer); reject(e); } });
+      }); };
+      const p = this.queue.then(run, run);
+      this.queue = p.catch(() => {});
+      return p;
+    }
+    async ok(cmd) { const r = await this.send(cmd); if (!r.startsWith('OK')) throw new Error(r.replace(/^ERR\s*/, '')); return r; }
+  };
+
+  // ---- demo scanner: answers exactly like the firmware (the tests compare the two) ----
+  P.MockScanner = class {
+    constructor(opts) {                         // opts.backlight: 1 = pretend the screen has a backlight pin (firmware built with DISPLAY_HAS_BL 1)
+      this.backlight = opts && opts.backlight ? 1 : 0;
+      this.authed = false; this.fails = 0; this.pairing = false; this.pin = 0; this.tokens = [];
+      this.url = P.PAGE_URL; this.s = P.defaults(); this.hangups = 0; this.trusted = false;
+    }
+    startPairing() { this.pin = 100000 + Math.floor(Math.random() * 900000); this.pairing = true; return this.pin; }
+    newConnection() { this.authed = false; this.fails = 0; }
+    getJson() {                                 // same key order as ScanLink::cmdGet
+      const s = this.s, j = JSON.stringify;
+      let o = `{"proto":1,"fw":"1.2.0-backlight","name":"HB SCANNER","dev":"scanner","preset":${j(s.preset)},"col":{`;
+      o += P.COLS.map(k => `${j(k)}:${j(s.col[k])}`).join(',') + '}';
+      for (const [k] of P.NUM) o += `,${j(k)}:${s[k]}`;
+      o += `,"url":${j(this.url)},"phones":${this.tokens.length},"backlight":${this.backlight},"presets":${j(P.PRESET_IDS)}}`;
+      return o;
+    }
+    handle(line) {
+      const ok = x => 'OK' + (x === undefined ? '' : ' ' + x), err = m => 'ERR ' + m;
+      if (this.trusted) this.authed = true;
+      const m = /^ *(\S*) *(.*)$/.exec(line), verb = m[1].toUpperCase().slice(0, 9), rest = m[2];
+      const words = rest.split(/ +/).filter(Boolean);
+      if (!verb) return err('empty');
+      if (verb === 'HELLO' || verb === 'PING')
+        return ok(`{"proto":1,"fw":"1.2.0-backlight","name":"HB SCANNER","dev":"scanner","auth":${this.authed ? 1 : 0},"pairing":${this.pairing ? 1 : 0}}`);
+      if (verb === 'AUTH') {
+        if (this.fails >= 5) return err('locked');
+        const a = (words[0] || '').slice(0, 23);
+        if (/^\d{6}$/.test(a) && this.pairing && +a === this.pin) {
+          const tok = Array.from({ length: 8 }, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('');
+          this.tokens.push(tok); if (this.tokens.length > 4) this.tokens.shift();
+          this.pairing = false; this.pin = 0; this.authed = true; this.fails = 0;
+          return ok('TOKEN ' + tok);
+        }
+        if (a.length === 16 && /^[0-9a-fA-F]+$/.test(a) && this.tokens.includes(a.toLowerCase())) { this.authed = true; this.fails = 0; return ok(); }
+        if (++this.fails >= 5) { this.hangups++; return err('locked'); }
+        return err(this.pairing ? 'auth' : 'auth (open pairing on the scanner first)');
+      }
+      if (!this.authed) return err(this.fails >= 5 ? 'locked' : 'pair first (AUTH <pin>)');
+      if (verb === 'GET') return ok(this.getJson());
+      if (verb === 'SET') {
+        const t = JSON.parse(JSON.stringify(this.s));
+        let colour = false, pairs = 0;
+        const W = rest.split(/ +/).filter(Boolean);
+        if (!W.length) return err('SET <key> <value> ...');
+        for (let i = 0; i < W.length; i += 2) {
+          const key = W[i].slice(0, 15).toLowerCase(), val = (W[i + 1] || '').slice(0, 15);
+          if (!val) return err('SET <key> <value> ...');
+          if (key.startsWith('c.') && P.COLS.includes(key.slice(2))) {
+            const c = P.parseHex(val);
+            if (c === null) return `ERR ${key}: colour must be #rrggbb`;
+            const hx = P.toHex(c);
+            if (t.col[key.slice(2)] !== hx) { t.col[key.slice(2)] = hx; colour = true; }
+            pairs++; continue;
+          }
+          if (!P.LIMIT[key]) return `ERR unknown setting ${key}`;
+          const [lo, hi] = P.LIMIT[key];
+          if (!/^[+-]?\d+$/.test(val) || +val < lo || +val > hi) return `ERR ${key} must be ${lo}..${hi}`;
+          t[key] = +val; pairs++;
+        }
+        if (!pairs) return err('SET <key> <value> ...');
+        if (colour) { t.preset = 'custom'; const p = P.presetOf(t.col); if (p !== 'custom') t.preset = p; }
+        this.s = t;
+        return ok();
+      }
+      if (verb === 'PRESET') {
+        const id = (words[0] || '').slice(0, 11).toLowerCase();
+        if (!P.PRESETS[id]) return err('preset must be cyan, cod, mech, titan or night');
+        P.COLS.forEach((k, i) => { this.s.col[k] = P.toHex(P.PRESETS[id][i]); });
+        this.s.preset = id;
+        return ok();
+      }
+      if (verb === 'DEFAULTS') { const rot = this.s.rot, mir = this.s.mirror; this.s = P.defaults(); this.s.rot = rot; this.s.mirror = mir; return ok(); }
+      if (verb === 'URL') {
+        const u = (words[0] || '').slice(0, 121);
+        if (!u) return ok(this.url);
+        if (u === 'RESET') { this.url = P.PAGE_URL; return ok(this.url); }
+        if (u.length >= 120 || !/^https?:\/\//.test(u) || /[^\x21-\x7e]/.test(u)) return err('URL must start with https:// and be under 120 characters');
+        this.url = u; return ok(this.url);
+      }
+      if (verb === 'PAIR') { if (!this.trusted) return err('PAIR works over USB only'); this.startPairing(); return ok('PIN ' + String(this.pin).padStart(6, '0')); }
+      if (verb === 'FORGET') { this.tokens = []; this.authed = this.trusted; return ok(); }
+      if (verb === 'BYE') { this.hangups++; return ok(); }
+      return err('unknown command');
+    }
+  };
+
+  // A transport that runs MockScanner through the same framing as Bluetooth.
+  P.MockTransport = class {
+    constructor(dev, notifyChunk) { this.d = dev; this.chunkMax = 20; this.notifyMax = notifyChunk || 182; this.rx = new P.Reassembler(); this.onChunk = null; this.latency = 25; }
+    async write(chunks) {
+      for (const c of chunks) {
+        const r = this.rx.feed(c);
+        if (r.type === 'message') {
+          const reply = this.d.handle(r.text);
+          setTimeout(() => { for (const k of P.encode(reply, this.notifyMax)) this.onChunk && this.onChunk(k); }, this.latency);
+        }
+      }
+    }
+    close() {}
+  };
+
+  root.ScanProto = P;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script id="scan-radar">
+/* ===== ScanRadar: the scanner's screen drawn on a <canvas>, same geometry as
+   radar_draw.cpp (cone of 24 triangles, three arcs of 28 segments, ping-pong sweep
+   with a 10-line trail, chevron, 3-circle contacts, HUD, bezel). The fonts are the
+   browser's, so text is close but not pixel-exact. ===== */
+(function (root) {
+  'use strict';
+  const P = root.ScanProto;
+  const R = {};
+  const OX = 120, OY = 200, RANGE_PX = 128, CX = 120, CY = 120, BEZEL_R = 118;
+  const lround = v => Math.sign(v) * Math.round(Math.abs(v));     // C lroundf: halves away from zero
+  R.lround = lround;
+  const polar = (deg, r) => { const a = deg * Math.PI / 180; return [OX + lround(Math.sin(a) * r), OY - lround(Math.cos(a) * r)]; };
+  R.worldToScreen = (s, x, y) => {
+    if (s.mirror) x = -x;
+    const k = RANGE_PX / s.range;
+    return [OX + lround(x * k), OY - lround(y * k)];
+  };
+  // Pretend people walking around in front of you (mm, radar coordinates).
+  R.people = function (t) {
+    const s = t / 1000;
+    return [
+      { x: Math.round(1800 * Math.sin(s * 0.31)), y: Math.round(3300 + 1700 * Math.sin(s * 0.23 + 1)), on: Math.sin(s * 0.17) > -0.6 },
+      { x: Math.round(-1200 + 900 * Math.sin(s * 0.45 + 2)), y: Math.round(1900 + 1100 * Math.cos(s * 0.27)), on: Math.sin(s * 0.21 + 2) > -0.2 },
+      { x: Math.round(2400 * Math.cos(s * 0.19 + 0.5)), y: Math.round(5200 + 900 * Math.sin(s * 0.33)), on: Math.cos(s * 0.13) > 0.1 },
+    ];
+  };
+  // Radar reports 10x a second; a contact that stops being reported stays for "linger" ms.
+  R.Tracker = class {
+    constructor() { this.t = [0, 1, 2].map(() => ({ active: false, x: 0, y: 0, seen: 0 })); this.lastReport = -1e9; }
+    update(now, s, people) {
+      if (now - this.lastReport >= 100) {
+        this.lastReport = now;
+        people.forEach((p, i) => { if (p.on && p.y > 0) Object.assign(this.t[i], { active: true, x: p.x, y: p.y, seen: now }); });
+      }
+      for (const t of this.t) if (t.active && now - t.seen > s.linger) t.active = false;
+      return this.t;
+    }
+  };
+
+  R.draw = function (ctx, s, now, tracks, pal) {
+    pal = pal || P.palette(s);
+    const fov = s.fov, half = fov / 2;
+    ctx.save();
+    ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, 240, 240);
+    // cone
+    ctx.fillStyle = pal.fov; ctx.beginPath(); ctx.moveTo(OX, OY);
+    for (let i = 0; i <= 24; i++) { const [x, y] = polar(-half + fov * i / 24, RANGE_PX); ctx.lineTo(x, y); }
+    ctx.closePath(); ctx.fill();
+    const line = (a, b, c, d, col) => { ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a + .5, b + .5); ctx.lineTo(c + .5, d + .5); ctx.stroke(); };
+    // rings + labels
+    ctx.font = '8px ui-monospace,Menlo,Consolas,monospace'; ctx.textBaseline = 'middle';
+    for (let r = 0; r < 3; r++) {
+      const rad = RANGE_PX * (r + 1) / 3, col = r === 2 ? pal.ring2 : pal.ring;
+      ctx.strokeStyle = col; ctx.beginPath();
+      for (let i = 0; i <= 28; i++) { const [x, y] = polar(-half + fov * i / 28, rad); i ? ctx.lineTo(x + .5, y + .5) : ctx.moveTo(x + .5, y + .5); }
+      ctx.stroke();
+      const lab = P.ringLabel(Math.floor(s.range * (r + 1) / 3));
+      ctx.fillStyle = pal.text2;
+      if (r === 2) { const [x, y] = polar(half - 8, rad); ctx.textAlign = 'right'; ctx.fillText(lab, x, y); }
+      else { const [x, y] = polar(half + 8, rad); ctx.textAlign = 'left'; ctx.fillText(lab, x, y); }
+    }
+    { const [xl, yl] = polar(-half, RANGE_PX), [xr, yr] = polar(half, RANGE_PX); line(OX, OY, xl, yl, pal.ring2); line(OX, OY, xr, yr, pal.ring2); }
+    // sweep
+    const phase = (now % s.sweep) / s.sweep, tt = phase < 0.5 ? phase * 2 : 2 - phase * 2, ang = -half + tt * fov, dir = phase < 0.5 ? -1 : 1;
+    for (let i = 10; i >= 0; i--) {
+      const a = ang + dir * i * 1.4; if (a < -half || a > half) continue;
+      const [x, y] = polar(a, RANGE_PX); line(OX, OY, x, y, i === 0 ? pal.sweep : pal.sweep2);
+    }
+    // you
+    ctx.fillStyle = pal.player; ctx.strokeStyle = pal.text;
+    ctx.beginPath(); ctx.moveTo(OX, OY - 8); ctx.lineTo(OX - 6, OY + 5); ctx.lineTo(OX + 6, OY + 5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // contacts
+    let n = 0, closest = 1e9;
+    for (const t of tracks) {
+      if (!t.active || t.y <= 0) continue;
+      const rng = lround(Math.hypot(t.x, t.y));
+      if (s.range < 6000 && rng > s.range) continue;
+      const [x, y] = R.worldToScreen(s, t.x, t.y);
+      for (const [rr, c] of [[6.5, pal.halo], [4.5, pal.blip], [2.5, pal.core]]) { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + .5, y + .5, rr, 0, 7); ctx.fill(); }
+      n++; closest = Math.min(closest, rng);
+    }
+    // HUD
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = pal.text; ctx.font = '14px ui-monospace,Menlo,Consolas,monospace'; ctx.fillText('HEARTBEAT', CX, 16);
+    ctx.fillStyle = pal.text2; ctx.font = '8px ui-monospace,Menlo,Consolas,monospace'; ctx.fillText('SENSOR', CX, 34);
+    ctx.fillStyle = pal.text; ctx.fillText('CONTACTS  ' + n, CX, 208);
+    if (n) {
+      const m = closest / 1000;
+      if (m < s.close / 1000) { ctx.fillStyle = pal.warn; ctx.fillText('CLOSE  ' + m.toFixed(1) + 'm', CX, 218); }
+      else { ctx.fillStyle = pal.text; ctx.fillText(m.toFixed(1) + 'm', CX, 218); }
+    } else { ctx.fillStyle = pal.text2; ctx.fillText('CLEAR', CX, 218); }
+    // bezel
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = pal.ring2; ctx.beginPath(); ctx.arc(CX, CY, BEZEL_R, 0, 7); ctx.stroke();
+    ctx.strokeStyle = pal.grid; ctx.beginPath(); ctx.arc(CX, CY, BEZEL_R - 1, 0, 7); ctx.stroke();
+    ctx.fillStyle = pal.bezel; ctx.beginPath(); ctx.rect(0, 0, 240, 240); ctx.moveTo(CX + BEZEL_R + 0.5, CY); ctx.arc(CX, CY, BEZEL_R + 0.5, 0, Math.PI * 2, true); ctx.fill('evenodd');
+    ctx.restore();
+    return { contacts: n, closest: n ? closest : -1 };
+  };
+  root.ScanRadar = R;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script id="scan-ui">
+(function () {
+  'use strict';
+  const P = window.ScanProto, R = window.ScanRadar;
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const qs = new URLSearchParams(location.search);
+  const PAGE_VERSION = 'v5';             // keep in step with VERSION in sw.js (tests check it)
+  const store = { get: (k, d) => { try { const v = localStorage.getItem('hbscan.' + k); return v === null ? d : v; } catch (e) { return d; } },
+    set: (k, v) => { try { localStorage.setItem('hbscan.' + k, v); } catch (e) { /* private mode */ } } };
+  // st.s = the settings shown (from the scanner, or the preview-only copy when not connected)
+  const st = { client: null, t: null, demo: false, linked: false, dev: null, s: P.defaults(), info: null, mock: null };
+  window.__scan = st;                  // for tests/test_webapp_ui.mjs
+
+  // ------------------------------------------------------------ toast + log
+  let toastTimer = 0;
+  function toast(msg, bad) {
+    const t = $('#toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : '');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = ''; }, bad ? 4200 : 2200);
+  }
+  const logLines = [];
+  function log(s) { logLines.push(new Date().toTimeString().slice(0, 8) + ' ' + s); if (logLines.length > 200) logLines.shift(); const l = $('#log'); if (l) l.textContent = logLines.join('\n'); }
+
+  // ------------------------------------------------------------ navigation
+  const NAV = [['connect', 'Link', '<path d="M7 12a5 5 0 0 1 5-5h3m2 5a5 5 0 0 1-5 5H9M8 12h8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>'],
+    ['look', 'Look', '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/>'],
+    ['radar', 'Radar', '<path d="M12 20 3 8a14 14 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="14" cy="10" r="2" fill="currentColor"/>'],
+    ['mount', 'Mount', '<path d="M12 4v4M12 16v4M4 12h4M16 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>'],
+    ['device', 'Device', '<rect x="5" y="4" width="14" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 16h6" stroke="currentColor" stroke-width="2"/>']];
+  $('#nav').innerHTML = NAV.map(([id, label, svg]) => `<a href="#${id}" data-sec="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${svg}</svg>${label}</a>`).join('');
+  function show(id) {
+    if (!NAV.some(n => n[0] === id)) id = 'connect';
+    $$('main section').forEach(s => s.classList.toggle('show', s.id === id));
+    $$('#nav a').forEach(a => a.setAttribute('aria-current', a.dataset.sec === id ? 'page' : 'false'));
+  }
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1) || 'connect');
+
+  // ------------------------------------------------------------ page colours follow the scanner's
+  function themePage() {
+    const c = st.s.col, root = document.documentElement.style;
+    const mix = (a, b, p) => `color-mix(in srgb,${a} ${p}%,${b})`;
+    root.setProperty('--bg', mix(c.bg, '#000', 70));
+    root.setProperty('--panel', mix(c.fov, c.bg, 35));
+    root.setProperty('--panel2', mix(c.fov, c.bg, 60));
+    root.setProperty('--line', mix(c.ring2, c.bg, 55));
+    root.setProperty('--accent', mix(c.sweep, c.text, 70));
+    root.setProperty('--accent2', c.warn);
+    root.setProperty('--hot', c.blip);
+    root.setProperty('--soft', mix(c.text, '#8a8f94', 55));
+    const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = c.bg;
+  }
+
+  // ------------------------------------------------------------ live preview
+  const cv = $('#preview'), ctx = cv.getContext('2d');
+  const tracker = new R.Tracker();
+  const t0 = performance.now();
+  let pal = P.palette(st.s), lastStats = null;
+  function frame() {
+    const now = Math.floor(performance.now() - t0);
+    const tracks = tracker.update(now, st.s, R.people(now));
+    lastStats = R.draw(ctx, st.s, now, tracks, pal);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.__drawPreviewAt = now => {          // tests: deterministic still frame
+    const tr = [{ active: true, x: -272, y: 850 }, { active: true, x: 1500, y: 3200 }, { active: true, x: -1800, y: 4600 }];
+    return R.draw(ctx, st.s, now, tr, P.palette(st.s));
+  };
+  function stageMeta() {
+    const s = st.s;
+    $('#stageMeta').innerHTML = `<b>${P.PRESET_NAME[s.preset] || 'Custom colours'}</b><br>` +
+      `Range ${(s.range / 1000).toFixed(1)} m &middot; cone ${s.fov}&deg;<br>Sweep ${(s.sweep / 1000).toFixed(1)} s &middot; linger ${(s.linger / 1000).toFixed(2)} s<br>` +
+      `CLOSE ${s.close ? (s.close / 1000).toFixed(1) + ' m' : 'off'} &middot; ${s.bright}%<br>` +
+      (st.linked ? `<span>Live on the scanner${st.demo ? ' (demo)' : ''}</span>` : `<span class="note">Preview only: connect to send changes</span>`);
+  }
+
+  // ------------------------------------------------------------ controls
+  const presetBox = $('#presets');
+  presetBox.innerHTML = P.PRESET_IDS.map(id => `<button data-preset="${id}" aria-pressed="false"><canvas width="240" height="240"></canvas>${P.PRESET_NAME[id]}</button>`).join('');
+  $$('#presets button').forEach(b => {
+    const s = P.defaults(); P.COLS.forEach((k, i) => { s.col[k] = P.toHex(P.PRESETS[b.dataset.preset][i]); });
+    R.draw(b.querySelector('canvas').getContext('2d'), s, 520, [{ active: true, x: -600, y: 1300 }, { active: true, x: 1500, y: 3600 }]);
+    b.addEventListener('click', () => choosePreset(b.dataset.preset));
+  });
+  $('#cols').innerHTML = P.COLS.map(k => `<div class="colrow"><label for="col_${k}">${P.COL_LABEL[k]}</label><code id="hex_${k}"></code><input type="color" id="col_${k}" data-col="${k}"></div>`).join('');
+
+  const fmt = {
+    range: v => (v / 1000).toFixed(1) + ' m', fov: v => v + '\u00b0', sweep: v => (v / 1000).toFixed(1) + ' s',
+    linger: v => (v / 1000).toFixed(2) + ' s', close: v => v ? (v / 1000).toFixed(1) + ' m' : 'off', bright: v => v + ' %',
+  };
+  function render() {
+    const s = st.s;
+    pal = P.palette(s);
+    for (const k of Object.keys(fmt)) { const el = $('#' + k); if (document.activeElement !== el) el.value = s[k]; $('#v_' + k).textContent = fmt[k](s[k]); }
+    for (const k of P.COLS) { const el = $('#col_' + k); if (document.activeElement !== el) el.value = s.col[k]; $('#hex_' + k).textContent = s.col[k]; }
+    $$('#presets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.preset === s.preset)));
+    $('#presetName').textContent = P.PRESET_NAME[s.preset] || 'custom';
+    $$('#rotSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rot === s.rot)));
+    $('#mirror').checked = !!s.mirror;
+    $('#bootpair').value = String(s.bootpair);
+    if (st.info) {
+      if (document.activeElement !== $('#url')) $('#url').value = st.info.url;
+      $('#phones').textContent = st.info.phones; $('#fw').textContent = st.info.fw;
+    }
+    brightnessNote();
+    themePage(); stageMeta();
+  }
+  // What the Brightness slider does depends on the screen the scanner reports (GET "backlight"): a screen with a backlight pin is
+  // dimmed by the backlight itself (saves battery); the 7-pin module only gets darker colours. Not connected: assume the 7-pin screen.
+  function brightnessNote() {
+    const bl = !!(st.info && st.info.backlight);
+    $('#brightLabel').textContent = bl ? 'Screen brightness (backlight)' : 'Screen brightness (software)';
+    $('#brightNote').innerHTML = bl
+      ? 'This dims the screen\'s backlight, so it also saves battery. The preview below only approximates how dark it will look.'
+      : 'This only darkens the colours. The 7-pin display has no backlight pin, so the backlight stays fully on and this does <b>not</b> save battery.';
+  }
+
+  // Changes go out as "SET k v k v ...", at most one command in flight; slider drags coalesce.
+  let pending = {}, flushing = false;
+  // obj: numbers by name ({range: 4500}); colours as '#rrggbb' strings ({fov: '#10454a'}).
+  // ("fov" is both the cone width and the cone colour: the value's type tells them apart.)
+  function change(obj) {
+    let colour = false;
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === 'string') { st.s.col[k] = v; colour = true; pending['c.' + k] = v; }
+      else { st.s[k] = v; pending[k] = v; }
+    }
+    if (colour) st.s.preset = P.presetOf(st.s.col);
+    render();
+    if (!st.linked) { pending = {}; return; }
+    flush();
+  }
+  async function flush() {
+    if (flushing || !st.linked || !Object.keys(pending).length) return;
+    flushing = true;
+    const batch = pending; pending = {};
+    try { await st.client.ok('SET ' + Object.entries(batch).map(([k, v]) => k + ' ' + v).join(' ')); }
+    catch (e) { toast('Not saved: ' + e.message, true); await refresh(); }
+    flushing = false;
+    if (Object.keys(pending).length) setTimeout(flush, 60);
+  }
+  window.__flushed = () => !flushing && !Object.keys(pending).length;
+
+  $$('input[type=range][data-key]').forEach(el => el.addEventListener('input', () => change({ [el.dataset.key]: +el.value })));
+  $$('input[type=color][data-col]').forEach(el => el.addEventListener('input', () => change({ [el.dataset.col]: P.quantize(el.value) })));
+  $$('#rotSeg button').forEach(b => b.addEventListener('click', () => change({ rot: +b.dataset.rot })));
+  $('#mirror').addEventListener('change', () => change({ mirror: $('#mirror').checked ? 1 : 0 }));
+  $('#bootpair').addEventListener('change', () => change({ bootpair: +$('#bootpair').value }));
+
+  async function choosePreset(id) {
+    P.COLS.forEach((k, i) => { st.s.col[k] = P.toHex(P.PRESETS[id][i]); });
+    st.s.preset = id; render();
+    if (st.linked) { try { await st.client.ok(P.cmd.preset(id)); toast(P.PRESET_NAME[id]); } catch (e) { toast(e.message, true); await refresh(); } }
+  }
+
+  // ------------------------------------------------------------ transports
+  class AutoSkip extends Error { constructor(m) { super(m); this.name = 'AutoSkip'; } }   // the quiet page-open reconnect gave up: not an error to show
+  class BleTransport {
+    constructor() { this.chunkMax = 20; this.onChunk = null; this.busy = Promise.resolve(); }
+    // The scanner used last time: Chrome (with its "new permissions backend" and experimental-features flags on) and Bluefy
+    // list the devices this site may use, so it can be reconnected without the picker. Anything missing, or the scanner not
+    // advertising within a few seconds, falls back to the normal picker.
+    async remembered() {
+      const bt = navigator.bluetooth;
+      if (!bt || !bt.getDevices) return null;
+      let list; try { list = await bt.getDevices(); } catch (e) { return null; }
+      let last = null; try { last = JSON.parse(store.get('lastDev', 'null')); } catch (e) { /* none */ }
+      list = (list || []).filter(d => d && ((last && d.id === last.id) || /^HB SCANNER/i.test(d.name || '')));   // the watch page shares this site's permissions
+      return list.find(d => last && d.id === last.id) || (list.length === 1 ? list[0] : null);
+    }
+    async awake(dev, ms) {      // true when the scanner was seen advertising (or this browser cannot tell), false after ms
+      if (!dev.watchAdvertisements) return true;
+      const ac = new AbortController();
+      let h = null;
+      try {
+        await dev.watchAdvertisements({ signal: ac.signal });
+        return await new Promise(res => { const t = setTimeout(() => res(false), ms); h = () => { clearTimeout(t); res(true); }; dev.addEventListener('advertisementreceived', h); });
+      } catch (e) { return true; }
+      finally { if (h) dev.removeEventListener('advertisementreceived', h); try { ac.abort(); } catch (e) { /* done */ } }
+    }
+    async open(forcePick, auto) {
+      let dev = null;
+      if (auto) {     // page-open reconnect: the remembered scanner only, and only when it can be seen advertising. Never the picker (that needs a tap).
+        const r = await this.remembered();
+        if (!r || !r.watchAdvertisements) throw new AutoSkip('no remembered scanner to reconnect to');
+        if (!(await this.awake(r, 3000))) throw new AutoSkip('the remembered scanner is not advertising (its Bluetooth is only on for 2 minutes after power-on or a BOOT hold)');
+        dev = r; this.viaRemembered = true;
+      } else if (!forcePick) {
+        const r = await this.remembered();
+        if (r) { if (await this.awake(r, 3000)) { dev = r; this.viaRemembered = true; } else log('the remembered scanner is not advertising: opening the picker'); }
+      }
+      if (!dev) dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [P.SVC] }, { namePrefix: 'HB SCANNER' }], optionalServices: [P.SVC] });
+      this.dev = dev;
+      this.gone = () => { dev.removeEventListener('gattserverdisconnected', this.gone); onDisconnected(); };   // the same device object can be reused, so never stack listeners
+      dev.addEventListener('gattserverdisconnected', this.gone);
+      let gatt;
+      if (this.viaRemembered) {   // a remembered scanner that is not really there would hang for ~30 s: give up after 12 s
+        let to; gatt = await Promise.race([dev.gatt.connect(), new Promise((_, rej) => { to = setTimeout(() => { try { dev.gatt.disconnect(); } catch (e) { /* none */ } rej(new Error('the scanner did not answer')); }, 12000); })]);
+        clearTimeout(to);
+      } else gatt = await dev.gatt.connect();
+      const svc = await gatt.getPrimaryService(P.SVC);
+      this.rx = await svc.getCharacteristic(P.RX);
+      this.tx = await svc.getCharacteristic(P.TX);
+      this.tx.addEventListener('characteristicvaluechanged', e => {
+        const v = e.target.value; this.onChunk && this.onChunk(new Uint8Array(v.buffer, v.byteOffset, v.byteLength).slice());
+      });
+      await this.tx.startNotifications();
+      store.set('lastDev', JSON.stringify({ id: dev.id || '', name: dev.name || '' }));
+      return this.dev;
+    }
+    // Bigger writes when the phone negotiated a big MTU (a probe checks it), else 20 bytes.
+    async fast(client) {
+      const old = client.timeoutMs; this.chunkMax = 180; this.noResp = !!this.rx.writeValueWithoutResponse; client.timeoutMs = 3000;
+      let ok = false;
+      try { ok = (await client.send('PING ' + 'x'.repeat(160))).startsWith('OK'); } catch (e) { ok = false; }
+      client.timeoutMs = old;
+      if (!ok) { this.chunkMax = 20; this.noResp = false; client.rx = new P.Reassembler(); }
+      log('write size ' + this.chunkMax);
+    }
+    write(chunks) {
+      const job = async () => { for (const c of chunks) await (this.noResp ? this.rx.writeValueWithoutResponse(c) : this.rx.writeValueWithResponse ? this.rx.writeValueWithResponse(c) : this.rx.writeValue(c)); };
+      const p = this.busy.then(job, job); this.busy = p.catch(() => {}); return p;
+    }
+    close() { try { this.dev && this.dev.gatt.connected && this.dev.gatt.disconnect(); } catch (e) { /* gone */ } }
+  }
+
+  function setPill() {
+    const p = $('#pill');
+    if (st.demo && st.linked) { p.textContent = 'demo'; p.className = 'pill demo'; }
+    else if (st.linked) { p.textContent = 'linked'; p.className = 'pill on'; }
+    else if (st.client) { p.textContent = 'pairing'; p.className = 'pill'; }
+    else { p.textContent = 'offline'; p.className = 'pill'; }
+    $('#connsub').textContent = st.linked ? (st.demo ? 'demo scanner (no hardware)' : (st.dev && st.dev.name || P.NAME)) : 'not connected';
+    $('#connected').hidden = !st.client;
+    $('#btnConnect').hidden = $('#btnDemo').hidden = !!st.client;
+    $('#btnPick').hidden = !!st.client || !(navigator.bluetooth && navigator.bluetooth.getDevices) || !store.get('lastDev', '');
+    $$('[data-need]').forEach(el => { el.disabled = !st.linked; });
+    stageMeta();
+  }
+  const tokenKey = () => 'token.' + (st.demo ? 'demo' : (st.dev && st.dev.id) || 'scanner');
+  async function startSession(transport, isDemo, auto) {
+    st.client = new P.Client(transport);
+    st.client.onLog = log;
+    st.demo = isDemo; st.t = transport; st.linked = false;
+    setPill();
+    const hello = P.parseJson(await st.client.send(P.cmd.hello()));
+    log('scanner firmware ' + hello.fw);
+    if (hello.dev !== 'scanner') throw new Error('that is not a Heartbeat Scanner');
+    if (!hello.auth) {
+      // This scanner's token; failing that the last token any scanner gave this phone (the browser may give the same scanner a new id).
+      const own = store.get(tokenKey(), ''), tok = own || (isDemo ? '' : store.get('token.last', ''));
+      let ok = false;
+      if (tok) {
+        const ar = await st.client.send(P.cmd.auth(tok));
+        ok = ar === 'OK';
+        if (ok && !own && !isDemo) store.set(tokenKey(), tok);
+        else if (!ok && ar.startsWith('ERR auth')) { if (own) store.set(tokenKey(), ''); if (store.get('token.last', '') === tok) store.set('token.last', ''); }      // the scanner forgot this phone: do not try a dead token every time
+      }
+      if (!ok && isDemo) { const pin = st.mock.startPairing(); toast('Demo PIN ' + pin); ok = await doPin(String(pin)); }
+      if (!ok && auto) throw new AutoSkip('this phone is not paired (or the scanner forgot it): waiting for a tap');   // never open the PIN box unasked
+      if (!ok) { $('#pinbox').hidden = false; $('#pin').focus(); setPill(); return; }
+    }
+    await afterAuth();
+  }
+  async function doPin(pin) {
+    pin = String(pin).trim();
+    if (!st.client) { toast('Connect the scanner first', true); return false; }
+    // A wrong PIN counts towards the scanner's 5-try lock, so do not spend one on a half-typed PIN.
+    if (!/^\d{6}$/.test(pin)) { toast('The PIN is 6 digits: type all of them', true); return false; }
+    let r;
+    try { r = await st.client.send(P.cmd.auth(pin)); }
+    catch (e) { toast('Could not send the PIN: ' + e.message, true); return false; }
+    if (r.startsWith('OK TOKEN ')) { store.set(tokenKey(), r.slice(9).trim()); if (!st.demo) store.set('token.last', r.slice(9).trim()); $('#pinbox').hidden = true; toast('Paired'); return true; }
+    toast(r.includes('locked') ? 'Too many wrong PINs: reconnect and try again'
+      : r.includes('first') ? 'Pairing is not open: hold BOOT on the scanner for a new PIN, then try again'
+      : r === 'ERR auth' ? 'Wrong PIN: check the scanner screen'
+      : 'Pairing failed: ' + r.replace(/^ERR\s*/, ''), true);
+    return false;
+  }
+  async function afterAuth() {
+    st.linked = true;
+    if (!st.demo && st.t.fast) await st.t.fast(st.client);
+    await refresh();
+    setPill();
+    if (location.hash === '' || location.hash === '#connect') location.hash = '#look';
+  }
+  async function refresh() {
+    if (!st.client) return;
+    try {
+      const g = P.parseJson(await st.client.send(P.cmd.get()));
+      st.info = { fw: g.fw, url: g.url, phones: g.phones, backlight: Number(g.backlight) === 1 };
+      const s = { preset: g.preset, col: g.col };
+      for (const [k] of P.NUM) s[k] = Number(g[k]);     // numbers only: these reach innerHTML in stageMeta
+      st.s = s;
+      render();
+    } catch (e) { toast('Could not read the scanner: ' + e.message, true); }
+    setPill();
+  }
+  function onDisconnected() {
+    log('disconnected');
+    st.client = null; st.t = null; st.linked = false; $('#pinbox').hidden = true;
+    setPill(); toast('Scanner disconnected', true);
+  }
+  async function connect(pick, auto) {
+    const t = new BleTransport();
+    try { st.dev = await t.open(pick, auto); log('connected to ' + (st.dev.name || 'scanner') + (t.viaRemembered ? ' (remembered)' : '')); await startSession(t, false, auto); }
+    catch (e) {
+      if (auto) {      // quiet: no toast, no PIN box; leave the Connect button waiting for a tap
+        log('auto-reconnect skipped: ' + (e && e.message));
+        if (t.dev && t.gone) t.dev.removeEventListener('gattserverdisconnected', t.gone);
+        if (!st.linked) { t.close(); st.client = null; st.t = null; $('#pinbox').hidden = true; setPill(); }
+        return;
+      }
+      if (t.viaRemembered && !st.linked) { toast('Could not reach the remembered scanner: hold BOOT for 1 second to wake its Bluetooth, then tap Connect again, or tap Choose another scanner.', true); }
+      else if (e && e.name !== 'NotFoundError') toast('Bluetooth: ' + e.message, true);
+      log('connect failed: ' + (e && e.message)); if (!st.linked) { t.close(); st.client = null; setPill(); }
+    }
+  }
+  // On page open: reconnect to the scanner used last time, once, without a tap. It needs getDevices + watchAdvertisements (Chrome with the
+  // flags on, or Bluefy), a remembered scanner that is advertising (its Bluetooth is on for only 2 minutes after power-on or a BOOT
+  // hold) and a stored pairing token. It never opens the picker, never asks for a PIN, never retries and stays silent when anything
+  // is missing: then the Connect button simply waits for a tap. It does nothing in the demo.
+  let autoTried = false;
+  async function autoReconnect() {
+    if (autoTried) return; autoTried = true;
+    if (st.client || st.demo || !(navigator.bluetooth && navigator.bluetooth.getDevices) || document.visibilityState === 'hidden') return;
+    let last = null; try { last = JSON.parse(store.get('lastDev', 'null')); } catch (e) { /* none */ }
+    if (!last || !last.id || !(store.get('token.' + last.id, '') || store.get('token.last', ''))) return;
+    const bc = $('#btnConnect'), bp = $('#btnPick'), bd = $('#btnDemo'), label = bc.textContent;
+    bc.disabled = bp.disabled = bd.disabled = true; bc.textContent = 'Reconnecting...';     // (the demo too: it would swap the session under the attempt)
+    let done = false;
+    const release = () => { if (done) return; done = true; bc.textContent = label; bc.disabled = bp.disabled = bd.disabled = false; };
+    const cap = setTimeout(() => { if (!st.linked) { log('auto-reconnect timed out'); release(); } }, 20000);     // never leave the buttons disabled
+    try { await connect(false, true); } catch (e) { log('auto-reconnect failed: ' + (e && e.message)); }
+    finally { clearTimeout(cap); release(); }
+  }
+  $('#btnConnect').addEventListener('click', () => connect(false));
+  $('#btnPick').addEventListener('click', () => connect(true));
+  async function startDemo() {
+    const m = st.mock = new P.MockScanner({ backlight: qs.get('backlight') === '1' });   // ?demo&backlight=1 pretends the screen has a backlight pin
+    window.__demoScanner = m;
+    st.dev = null;
+    await startSession(new P.MockTransport(m), true);
+  }
+  $('#btnDemo').addEventListener('click', () => startDemo().catch(e => toast(e.message, true)));
+  $('#btnPin').addEventListener('click', async () => { if (await doPin($('#pin').value)) await afterAuth(); });
+  $('#pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnPin').click(); });
+  $('#btnRefresh').addEventListener('click', () => refresh());
+  $('#btnDisconnect').addEventListener('click', async () => {
+    if (st.demo) { st.client = null; st.linked = false; st.demo = false; $('#pinbox').hidden = true; setPill(); return; }
+    try { await st.client.send(P.cmd.bye()); } catch (e) { /* closing anyway */ }
+    if (st.t) st.t.close();
+    $('#pinbox').hidden = true;
+  });
+  $('#btnUrl').addEventListener('click', async () => {
+    try { const r = await st.client.ok(P.cmd.url($('#url').value.trim())); toast('QR code now opens ' + r.slice(3)); await refresh(); } catch (e) { toast(e.message, true); }
+  });
+  $('#btnUrlReset').addEventListener('click', async () => { try { await st.client.ok(P.cmd.url('')); toast('Default address'); await refresh(); } catch (e) { toast(e.message, true); } });
+  $('#btnForget').addEventListener('click', async () => {
+    if (!confirm('Forget every paired phone? Each one (this one too) must pair with the PIN again.')) return;
+    try {
+      await st.client.ok(P.cmd.forget());
+      // The scanner also signs this connection out: pair again with a PIN from the scanner.
+      store.set(tokenKey(), ''); store.set('token.last', ''); st.linked = false; $('#pinbox').hidden = false; setPill();
+      location.hash = '#connect';
+      if (st.demo) { const pin = st.mock.startPairing(); toast('Phones forgotten. Demo PIN ' + pin); }
+      else toast('Phones forgotten. Hold BOOT on the scanner for a new PIN to pair again.');
+    } catch (e) { toast(e.message, true); }
+  });
+  $('#btnDefaults').addEventListener('click', async () => {
+    if (!confirm('Put the original look back? (Rotation and mirror are kept.)')) return;
+    try { await st.client.ok(P.cmd.defaults()); toast('Original look'); await refresh(); } catch (e) { toast(e.message, true); }
+  });
+  // keep-alive: the scanner hangs up after 10 minutes without a command
+  setInterval(() => { if (st.linked && !st.demo && document.visibilityState === 'visible') st.client.send(P.cmd.ping()).catch(() => {}); }, 60000);
+
+  // ------------------------------------------------------------ Bluetooth support notice, install, offline
+  const hasBt = !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+  if (!hasBt) {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    $('#nobt').hidden = false;
+    $('#nobt').innerHTML = ios
+      ? '<b>iPhone / iPad:</b> Safari has no Web Bluetooth. Open this page in the free <b>Bluefy</b> browser (App Store) to connect. The demo works here.'
+      : 'This browser has no Web Bluetooth. Use <b>Chrome</b> on Android, Windows, macOS or ChromeOS (over https). The demo works here.';
+    $('#btnConnect').disabled = true;
+  }
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#installCard').hidden = false; });
+  $('#btnInstall').addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); installEvt = null; $('#installCard').hidden = true; });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') && !qs.has('nosw')) {
+    // A new service worker takes over by itself (sw.js: skipWaiting + claim). Reloading would drop the Bluetooth link, so just offer it.
+    // The worker that takes over tells the pages it controls its version (sw.js activate); a page older than that offers a reload.
+    navigator.serviceWorker.addEventListener('message', e => {
+      const d = e.data;
+      if (d && d.type === 'sw-version' && d.version && d.version !== PAGE_VERSION) { $('#btnUpd').hidden = false; log('a new version of this page is ready (' + d.version + ')'); }
+    });
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      const look = () => { try { reg.update().catch(() => {}); } catch (e) { /* offline */ } };
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') look(); });
+      setInterval(look, 3600000);
+    }).catch(err => log('offline cache not available: ' + err.message));
+  }
+  $('#btnUpd').addEventListener('click', () => location.reload());
+  $('#verTxt').textContent = PAGE_VERSION;
+
+  render(); setPill();
+  if (qs.has('demo')) startDemo().catch(e => toast(e.message, true));
+  else if (hasBt) autoReconnect().catch(() => {});
+})();
+</script>
+</body>
+</html>

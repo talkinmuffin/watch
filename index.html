@@ -1,0 +1,2113 @@
+<!doctype html>
+<html lang="en" data-theme="std">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Settings for the Watch MK1 over Bluetooth: time, faces, alarms, sounds, display and text lines.">
+<title>Watch MK1 settings</title>
+<!-- Watch MK1 phone settings page (Part 4). One self-contained file: no build step,
+     nothing loaded from the internet. Works opened straight from disk (Chrome
+     desktop), from http://localhost, or hosted on https (GitHub Pages), where
+     manifest.webmanifest + sw.js beside it also make it an installable offline app.
+     Add ?demo to the address to try it with a pretend watch. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2302080e'/%3E%3Ccircle cx='32' cy='32' r='23' fill='none' stroke='%23c9963e' stroke-width='5'/%3E%3Cpath d='M32 17v15l9 6' stroke='%2328dcff' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{color-scheme:dark;--btn-bg:var(--accent);--bg:#000;--panel:#101113;--panel2:#17181b;--line:#2a2c30;--text:#f0f0ec;--soft:#a6a8ad;--accent:#ff4632;--accent2:#ffbe3c;--ok:#4bd18b;--bad:#ff5a4a;--font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--head:var(--font);--radius:14px;--btn-text:#fff;--glow:none;--clip:none;--hcase:none;--hspace:.02em}
+[data-theme="k40"]{--bg:#160505;--panel:#241010;--panel2:#2e1612;--line:#68461a;--text:#e2cda0;--soft:#a88a5c;--accent:#c9963e;--accent2:#ff3c28;--ok:#b5c96a;--bad:#ff4a32;--head:"Cinzel","Trajan Pro",Georgia,"Times New Roman",serif;--font:Georgia,"Iowan Old Style","Palatino Linotype",serif;--radius:4px;--btn-text:#1a0806;--hcase:uppercase;--hspace:.12em}
+[data-theme="tf"]{--bg:#02080e;--panel:#041620;--panel2:#06202e;--line:#0d4a5e;--text:#e1f5ff;--soft:#7fb6c8;--accent:#28dcff;--accent2:#ff8214;--ok:#28dcff;--bad:#ff5a3c;--head:"Barlow Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;--font:"Roboto Condensed","Arial Narrow",system-ui,sans-serif;--radius:0px;--btn-text:#021018;--glow:0 0 12px rgba(40,220,255,.35);--clip:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));--hcase:uppercase;--hspace:.08em}
+[data-theme="std"]{--btn-bg:#d63422}   /* v6: white text on this red is 4.8:1 (it was 3.4:1 on #ff4632); the bright red stays for borders, text links and ghost buttons */
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 var(--font);-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+[data-theme="k40"] body{background:radial-gradient(ellipse at 50% -10%,#3a1410 0,#160505 60%) fixed}
+[data-theme="tf"] body{background:linear-gradient(180deg,#03121c 0,#02080e 40%) fixed}
+[data-theme="tf"] body::before{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(40,220,255,.035) 0 1px,transparent 1px 4px)}
+h1,h2,h3{font-family:var(--head);text-transform:var(--hcase);letter-spacing:var(--hspace);margin:0;font-weight:700}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px calc(10px);padding-top:calc(10px + env(safe-area-inset-top));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header h1{font-size:18px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header svg{width:30px;height:30px;flex:none}
+.pill{font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);color:var(--soft);white-space:nowrap}
+.pill.on{color:var(--ok);border-color:var(--ok)}.pill.demo{color:var(--accent2);border-color:var(--accent2)}
+.themes{display:flex;gap:4px}
+.themes button{width:32px;height:32px;padding:0;border-radius:50%;border:2px solid var(--line);background:none;cursor:pointer}
+.themes button[aria-pressed="true"]{border-color:var(--accent);box-shadow:var(--glow)}
+.themes button span{display:block;width:100%;height:100%;border-radius:50%}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;overflow-x:auto;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--panel) 94%,transparent);border-top:1px solid var(--line);scrollbar-width:none;backdrop-filter:blur(8px)}
+nav::-webkit-scrollbar{display:none}
+nav a{flex:1 0 auto;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 6px;color:var(--soft);text-decoration:none;font-size:11px;border-radius:10px;text-transform:var(--hcase);letter-spacing:var(--hspace)}
+nav a svg{width:22px;height:22px}
+nav a[aria-current="page"]{color:var(--accent);background:var(--panel2)}
+main{max-width:620px;margin:0 auto;padding:14px}
+section{display:none}section.show{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:.3;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:0 0 12px;clip-path:var(--clip);position:relative}
+[data-theme="k40"] .card{border:1px solid var(--line);box-shadow:inset 0 0 0 3px var(--panel),inset 0 0 0 4px #3a2410}
+[data-theme="k40"] .card::before,[data-theme="k40"] .card::after{content:"";position:absolute;top:7px;width:6px;height:6px;border-radius:50%;background:#7a5420;box-shadow:0 0 0 1px #2a1408}
+[data-theme="k40"] .card::before{left:7px}[data-theme="k40"] .card::after{right:7px}
+[data-theme="tf"] .card{border-left:3px solid var(--accent)}
+.card h2{font-size:17px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.card h2 small{font:12px var(--font);color:var(--soft);text-transform:none;letter-spacing:0;margin-left:auto}
+[data-theme="k40"] .card h2{color:var(--accent);justify-content:center;text-align:center}
+[data-theme="k40"] .card h2::before,[data-theme="k40"] .card h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line))}
+[data-theme="k40"] .card h2::after{background:linear-gradient(270deg,transparent,var(--line))}
+[data-theme="k40"] .card h2 small{display:none}
+[data-theme="tf"] .card h2{color:var(--accent)}
+.row{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.row:first-of-type{border-top:0}
+.row label,.row .lbl{flex:1;min-width:0}
+.row .val{color:var(--soft);font-variant-numeric:tabular-nums;min-width:2.5em;text-align:right}
+.sub{color:var(--soft);font-size:13px}
+.hint{color:var(--soft);font-size:13px;margin:6px 0 0}
+button,.btn{font:inherit;font-family:var(--head);text-transform:var(--hcase);letter-spacing:var(--hspace);font-size:15px;min-height:44px;padding:0 16px;border-radius:var(--radius);border:1px solid var(--accent);background:var(--btn-bg);color:var(--btn-text);cursor:pointer;font-weight:700;clip-path:var(--clip);box-shadow:var(--glow)}
+button.ghost{background:transparent;color:var(--accent)}
+button.warn{background:transparent;color:var(--bad);border-color:var(--bad)}
+button.small{min-height:34px;padding:0 10px;font-size:13px}
+button:disabled{opacity:.4;cursor:default}
+button.wide{width:100%}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btns>*{flex:1 1 auto}
+input,select,textarea{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:calc(var(--radius) * .6);min-height:40px;padding:6px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+select{width:auto;min-width:110px}
+input[type=range]{padding:0;min-height:32px;accent-color:var(--accent);background:none;border:0;flex:1}
+.switch{position:relative;width:52px;height:30px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--panel2);border:1px solid var(--line);transition:.15s}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--soft);transition:.15s}
+.switch input:checked+span{background:color-mix(in srgb,var(--accent) 35%,var(--panel2));border-color:var(--accent)}
+.switch input:checked+span::after{left:25px;background:var(--accent)}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}   /* the real checkbox is invisible: show focus on the track */
+[data-theme="tf"] .switch span,[data-theme="tf"] .switch span::after{border-radius:2px}
+.big{font-family:var(--head);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+@media (max-width:340px){.big{font-size:28px}}   /* 320 px phones: two 34 px clocks side by side were 2 px too wide */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.faces{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.face{background:var(--panel2);border:2px solid var(--line);border-radius:var(--radius);padding:10px;text-align:center;cursor:pointer;color:var(--text);font:inherit;min-height:0;clip-path:var(--clip);box-shadow:none;text-transform:none;letter-spacing:0}
+.face[aria-pressed="true"]{border-color:var(--accent);box-shadow:var(--glow)}
+.face svg{width:100%;max-width:130px;aspect-ratio:1;display:block;margin:0 auto 6px}
+.face b{display:block;font-family:var(--head);text-transform:var(--hcase);letter-spacing:var(--hspace)}
+.face small{color:var(--soft)}
+.alarm{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.alarm:first-child{border-top:0}
+.alarm .t{font-family:var(--head);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;min-width:96px;cursor:pointer}
+.alarm .d{flex:1;min-width:0;cursor:pointer}.alarm .d div{color:var(--soft);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alarm.off .t{color:var(--soft)}
+.days{display:flex;gap:6px;justify-content:space-between;margin:8px 0}
+.days button{flex:1;min-width:0;padding:0;min-height:40px;background:var(--panel2);color:var(--soft);border-color:var(--line);box-shadow:none;border-radius:50%;aspect-ratio:1;max-width:44px;font-size:14px}
+[data-theme="tf"] .days button{border-radius:0}
+.days button[aria-pressed="true"]{background:var(--btn-bg);color:var(--btn-text);border-color:var(--accent)}
+.presets{display:flex;gap:6px;flex-wrap:wrap}.presets button{flex:1}
+.editor{border:1px dashed var(--accent);border-radius:var(--radius);padding:12px;margin-top:10px;background:var(--panel2)}
+.editor input[type=time]{font-family:var(--head);font-size:30px;text-align:center;min-height:56px}
+.welrow{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.welrow:first-of-type{border-top:0;padding-top:0}
+.welrow label{display:block;font-weight:600;margin-bottom:6px}
+.welrow textarea{width:100%;min-height:62px;font-size:16px;line-height:1.35;resize:none;padding:8px 10px;box-sizing:border-box}
+.welrow .welmeta{display:flex;justify-content:space-between;color:var(--soft);font-size:12px;margin:4px 0 2px}
+.warnbox{color:var(--warn,#ffb020)}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;background:var(--panel2);color:var(--soft);border-color:var(--line);box-shadow:none;font-size:13px;padding:0 6px}
+.tabs button[aria-selected="true"]{background:var(--btn-bg);color:var(--btn-text);border-color:var(--accent)}
+ol.lines{list-style:none;margin:0;padding:0}
+ol.lines li{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent);background:var(--panel);touch-action:pan-y}
+ol.lines li:first-child{border-top:0}
+ol.lines li.drag{opacity:.85;outline:2px solid var(--accent);position:relative;z-index:2;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+ol.lines li.drop{border-top:2px solid var(--accent)}
+.handle{flex:none;width:32px;height:40px;display:grid;place-items:center;color:var(--soft);cursor:grab;touch-action:none;user-select:none}
+.handle svg{width:18px;height:18px}
+ol.lines .num{flex:none;width:22px;color:var(--soft);font-size:12px;text-align:right}
+ol.lines textarea{flex:1;min-width:0;min-height:38px;font-size:15px;line-height:1.3;resize:none;overflow:hidden;padding:8px 10px;display:block}
+.cnt{flex:none;font-size:11px;color:var(--soft);width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.cnt.over{color:var(--bad)}
+.iconbtn{flex:none;width:36px;min-height:36px;height:36px;padding:0;display:grid;place-items:center;background:transparent;color:var(--soft);border:1px solid var(--line);box-shadow:none}
+.iconbtn svg{width:16px;height:16px}
+.addrow{display:flex;gap:8px;margin-top:10px}.addrow input{flex:1}
+.gauge{height:16px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+.gauge i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+[data-theme="tf"] .gauge,[data-theme="tf"] .gauge i{border-radius:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px}.kv dt{color:var(--soft)}.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.log{font:12px/1.35 ui-monospace,Menlo,Consolas,monospace;background:#0008;border:1px solid var(--line);border-radius:6px;padding:8px;max-height:200px;overflow:auto;white-space:pre-wrap;color:var(--soft)}
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.swatches span{width:38px;height:38px;border-radius:8px;border:1px solid #fff3;position:relative}
+.swatches span::after{content:attr(title);position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:9px;color:var(--soft);white-space:nowrap;display:none}
+.pin{display:flex;gap:8px}.pin input{font-family:var(--head);font-size:28px;letter-spacing:.3em;text-align:center;min-height:56px}
+.notice{border:1px solid var(--accent2);color:var(--text);background:color-mix(in srgb,var(--accent2) 10%,var(--panel));border-radius:var(--radius);padding:10px 12px;font-size:14px;margin-bottom:12px}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--accent);color:var(--text);padding:10px 14px;border-radius:var(--radius);z-index:9;max-width:90vw;font-size:14px;box-shadow:0 8px 30px #000a;opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}.toast.err{border-color:var(--bad)}
+[hidden]{display:none!important}   /* v5: .btns{display:flex} used to override hidden, so Refresh / Disconnect showed before connecting */
+.upd{position:fixed;left:50%;bottom:calc(138px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:8;max-width:90vw;box-shadow:0 8px 30px #000a}
+#verfoot{text-align:center;color:var(--soft);font-size:12px;padding:0 14px 10px}
+.hero{text-align:center;padding:10px 0 4px}
+.hero svg{width:150px;height:150px}
+.muted{opacity:.55;pointer-events:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (min-width:700px){nav{position:sticky;top:57px;bottom:auto;justify-content:center;border-top:0;border-bottom:1px solid var(--line)}body{padding-bottom:0}nav a{flex:0 0 auto}.faces{grid-template-columns:repeat(4,1fr)}}
+.lab h3{margin:12px 0 4px}
+.lab .row select{flex:0 1 62%;min-width:0;max-width:62%}
+.snd.clip{flex-wrap:wrap;padding:6px 0}.snd.clip .n{flex:1 1 100%}.snd.clip .acts{display:flex;gap:8px;width:100%;justify-content:flex-end;align-items:center}
+.labgrp{border-top:1px solid var(--line);margin-top:8px;padding-top:4px}
+.labgrp>summary{cursor:pointer;padding:8px 0;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+.labgrp>summary::-webkit-details-marker{display:none}
+.labgrp>summary::before{content:"\25B8";color:var(--accent);transition:transform .15s}
+.labgrp[open]>summary::before{transform:rotate(90deg)}
+.labgrp>summary small{margin-left:auto;color:var(--soft);font-weight:400;font-size:12px}
+.snd{display:flex;align-items:center;gap:10px;min-height:44px;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.snd .n{flex:1;min-width:0}.snd .n b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.snd .n small{color:var(--soft);font-size:12px}
+.snd .tag{font-size:11px;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--accent) 30%,transparent);color:var(--text);margin-left:6px}
+.play{width:40px;height:40px;min-height:40px;padding:0;flex:none;display:grid;place-items:center;border-radius:50%}
+.play svg{width:18px;height:18px}
+.play.on{background:var(--accent2);border-color:var(--accent2)}
+.filebtn{display:block;margin:10px 0 4px;position:relative}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.filebtn span{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px dashed var(--accent);border-radius:calc(var(--radius) * .6);color:var(--accent);font-weight:600}
+#labWave{width:100%;height:96px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;margin:8px 0 2px;display:block}
+.meter{height:10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);overflow:hidden;margin:6px 0 0}
+.meter span{display:block;height:100%;width:0;background:var(--ok);transition:width .2s}
+.meter.full span{background:var(--bad)}
+.prog{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden;margin-top:4px}.prog span{display:block;height:100%;background:var(--accent);width:0}
+code{font-size:12px;background:var(--panel2);padding:1px 4px;border-radius:4px;word-break:break-all}
+</style>
+</head>
+<body>
+<header>
+  <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="none" stroke="var(--accent)" stroke-width="4"/><circle cx="32" cy="32" r="21" fill="var(--panel2)"/><path d="M32 16v16l10 6" stroke="var(--text)" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="32" cy="32" r="3" fill="var(--accent2)"/></svg>
+  <h1 id="title">Watch MK1</h1>
+  <span class="pill" id="pill">offline</span>
+  <div class="themes" role="group" aria-label="Page style">
+    <button data-th="std" title="Standard" aria-label="Standard style"><span style="background:conic-gradient(#fff 0 25%,#000 0 50%,#ff4632 0 75%,#000 0)"></span></button>
+    <button data-th="k40" title="40K" aria-label="40K style"><span style="background:conic-gradient(#c9963e 0 25%,#160505 0 50%,#b21612 0 75%,#160505 0)"></span></button>
+    <button data-th="tf" title="Titanfall" aria-label="Titanfall style"><span style="background:conic-gradient(#28dcff 0 25%,#02080e 0 50%,#ff8214 0 75%,#02080e 0)"></span></button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<main>
+<section id="connect">
+  <div class="hero" id="hero"></div>
+  <div class="notice" id="nobt" hidden></div>
+  <div class="card">
+    <h2>Connect <small id="connsub">not connected</small></h2>
+    <p class="sub" id="connhelp">On the watch open <b>Menu &rsaquo; Phone &rsaquo; Pair</b> (it shows a QR code and a 6-digit PIN), then tap Connect and pick <b>WATCH MK1</b>. The PIN is only needed the first time: this phone is remembered after that (the watch remembers its last 4 phones).</p>
+    <div class="btns">
+      <button id="btnConnect">Connect watch</button>
+      <button class="ghost" id="btnPick" hidden>Choose another watch</button>
+      <button class="ghost" id="btnDemo">Try demo</button>
+    </div>
+    <div id="pinbox" hidden>
+      <p class="sub">Type the PIN shown on the watch:</p>
+      <div class="pin"><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN"><button id="btnPin">Pair</button></div>
+    </div>
+    <div class="btns" id="connected" hidden>
+      <button class="ghost" id="btnRefresh">Refresh</button>
+      <button class="warn" id="btnDisconnect">Disconnect</button>
+    </div>
+  </div>
+  <div class="card" id="installCard" hidden>
+    <h2>Install</h2>
+    <p class="sub">Add this page to the home screen: it opens like an app and works offline.</p>
+    <div class="btns"><button id="btnInstall">Install app</button></div>
+  </div>
+  <div class="card">
+    <a href="scanner/" id="scannerLink" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)">
+      <svg viewBox="0 0 64 64" aria-hidden="true" style="width:34px;height:34px;flex:none"><path d="M32 52 10 22a34 34 0 0 1 44 0z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/><circle cx="38" cy="28" r="5" fill="var(--accent2)"/></svg>
+      <span><b>Heartbeat Scanner settings</b><br><span class="sub">The other page in this kit</span></span>
+    </a>
+  </div>
+</section>
+
+<section id="time">
+  <div class="card">
+    <h2>Time sync <small id="zone"></small></h2>
+    <div class="grid2">
+      <div><div class="sub">Phone</div><div class="big" id="phoneTime">--:--:--</div><div class="sub" id="phoneDate"></div></div>
+      <div><div class="sub">Watch</div><div class="big" id="watchTime">--:--:--</div><div class="sub" id="watchDate"></div></div>
+    </div>
+    <div class="btns"><button class="wide" id="btnSync" data-need>Sync time from phone</button></div>
+    <div class="row"><label for="autoSync">Sync every time I connect</label><span class="switch"><input type="checkbox" id="autoSync"><span></span></span></div>
+    <p class="hint">Daylight saving: the watch gets your time zone rule (<code id="tzrule"></code>) and changes the clock itself when summer time starts or ends.</p>
+  </div>
+</section>
+
+<section id="faces">
+  <div class="card"><h2>Watch face</h2><div class="faces" id="faceList"></div>
+  <p class="hint">Each face brings its own compass and sound pack (unless Sounds &rsaquo; Pack is set).</p></div>
+</section>
+
+<section id="alarms">
+  <div class="card">
+    <h2>Alarms <small id="alarmCount"></small></h2>
+    <div id="alarmList"></div>
+    <div id="alarmEditor"></div>
+    <div class="btns"><button id="btnAddAlarm" data-need>Add alarm</button></div>
+  </div>
+</section>
+
+<section id="sounds">
+  <div class="card">
+    <h2>Sound</h2>
+    <div class="row"><span class="lbl">Volume</span><input type="range" min="0" max="5" id="vol" data-set="snd.vol" aria-label="Volume"><span class="val" id="volv"></span></div>
+    <div class="row"><label for="pack">Sound pack</label><select id="pack" data-set="snd.pack"></select></div>
+    <div class="row"><label for="hourly">Hourly chime <span class="sub">(08:00-21:00)</span></label><span class="switch"><input type="checkbox" id="hourly" data-set="snd.hourly"><span></span></span></div>
+    <div class="row"><label for="voice">Voice lines</label><span class="switch"><input type="checkbox" id="voice" data-set="snd.voice"><span></span></span></div>
+    <div class="row"><label for="keybeep">Key beep</label><span class="switch"><input type="checkbox" id="keybeep" data-set="snd.keybeep"><span></span></span></div>
+    <div class="row"><span class="lbl">Snooze</span><input type="range" min="1" max="30" id="snooze" data-set="snd.snooze" aria-label="Snooze minutes"><span class="val" id="snoozev"></span></div>
+  </div>
+  <div class="card">
+    <h2>Test sounds</h2>
+    <div class="btns" id="roleBtns"></div>
+    <div class="btns"><button class="warn" id="btnStop" data-need>Stop</button></div>
+  </div>
+  <div class="card lab" id="soundLab">
+    <h2>Sound Lab <small>no watch needed</small></h2>
+    <p class="sub">Hear every sound the watch can make, at its volume, and make your own clips.</p>
+    <div class="row"><label for="labSpk">Watch speaker <span class="sub">(sounds like the 13 mm speaker: no bass, softer peaks)</span></label><span class="switch"><input type="checkbox" id="labSpk"><span></span></span></div>
+    <div class="row"><span class="lbl">Volume as on the watch</span><input type="range" min="1" max="5" id="labVol" value="5" aria-label="Volume as on the watch"><span class="val" id="labVolv">5/5</span></div>
+    <div id="labPacks"><p class="hint" id="labLoading">Loading the watch sounds…</p></div>
+    <div class="btns"><button class="warn small" id="labStop">Stop</button></div>
+  </div>
+  <div class="card lab" id="labAlarmsCard">
+    <h2>Your alarms <small>what each one plays</small></h2>
+    <div id="labAlarms"></div>
+  </div>
+  <div class="card lab" id="labClipsCard">
+    <h2>Your own clips</h2>
+    <p class="sub">Load any audio file (WAV, MP3, M4A, OGG…). It is converted to exactly what the watch plays: 16 kHz, mono, 16-bit WAV with a plain header, quiet ends trimmed and the level set to -3 dB.</p>
+    <label class="filebtn"><input type="file" id="labFile" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac,.webm"><span>Load audio file</span></label>
+    <div id="labEdit" hidden>
+      <p class="sub" id="labSrc"></p>
+      <canvas id="labWave" width="720" height="140" aria-label="waveform"></canvas>
+      <div class="row"><span class="lbl">Start</span><input type="range" id="labStart" min="0" max="1000" value="0" aria-label="Clip start"><span class="val" id="labStartv">0.00 s</span></div>
+      <div class="row"><span class="lbl">End</span><input type="range" id="labEnd" min="0" max="1000" value="1000" aria-label="Clip end"><span class="val" id="labEndv"></span></div>
+      <div class="row"><label for="labTrim">Trim silence at the ends</label><span class="switch"><input type="checkbox" id="labTrim" checked><span></span></span></div>
+      <div class="row"><label for="labNorm">Set level to -3 dB</label><span class="switch"><input type="checkbox" id="labNorm" checked><span></span></span></div>
+      <div class="row"><label for="labSlot">Use it as</label><select id="labSlot"></select></div>
+      <p class="hint" id="labInfo"></p>
+      <div class="btns"><button class="ghost small" id="labPlayIn">Play original</button><button class="ghost small" id="labPlayOut">Play converted</button><button class="small" id="labSave">Keep for this slot</button></div>
+    </div>
+    <div class="row"><label for="labPart">Watch storage</label><select id="labPart"></select></div>
+    <div class="meter" id="labMeter"><span></span></div>
+    <p class="hint" id="labSpace"></p>
+    <div id="labList"></div>
+    <div class="btns"><button class="small" id="labZip">Download all (.zip for data/user)</button></div>
+    <p class="hint">Two ways onto the watch: <b>Send</b> puts a clip on it over Bluetooth (connect first), or download the files, put them in <code>watch_fw/data/user/</code> (the .zip already has the folders) and run <code>python3 tools/build_littlefs.py</code> + <code>tools/upload_littlefs.sh</code> over USB. Your clips win over the shipped ones with the same name. Kept clips stay in this browser.</p>
+    <div id="labWatchBox" hidden><h3 class="sub">On the watch now</h3><div id="labWatch"></div></div>
+  </div>
+</section>
+
+<section id="display">
+  <div class="card">
+    <h2>Display</h2>
+    <div class="row"><span class="lbl">Brightness</span><input type="range" min="1" max="5" id="bright" data-set="disp.bright" aria-label="Brightness"><span class="val" id="brightv"></span></div>
+    <div class="row"><span class="lbl">Dimmed level</span><input type="range" min="0" max="3" id="dim" data-set="disp.dim" aria-label="Dimmed level"><span class="val" id="dimv"></span></div>
+    <div class="row"><label for="autodim">Dim after</label><select id="autodim" data-set="disp.autodim"></select></div>
+    <div class="row"><label for="off">Screen off after</label><select id="off" data-set="disp.off"></select></div>
+    <div class="row"><label for="raise">Raise to wake</label><span class="switch"><input type="checkbox" id="raise" data-set="disp.raise"><span></span></span></div>
+    <div class="row"><label for="h24">24-hour clock</label><span class="switch"><input type="checkbox" id="h24" data-set="disp.h24"><span></span></span></div>
+    <div class="row"><label for="sec">Show seconds</label><span class="switch"><input type="checkbox" id="sec" data-set="disp.sec"><span></span></span></div>
+    <div class="row"><label for="rot">Rotate screen</label><select id="rot" data-set="disp.rot"><option value="0">0&deg;</option><option value="1">90&deg;</option><option value="2">180&deg;</option><option value="3">270&deg;</option></select></div>
+    <p class="hint">Short dim / off times save the most battery.</p>
+  </div>
+</section>
+
+<section id="text">
+  <div class="card">
+    <h2>Text lines <small id="textCount"></small></h2>
+    <div class="tabs" role="tablist" id="textTabs"></div>
+    <p class="hint" id="textHint"></p>
+    <ol class="lines" id="lines"></ol>
+    <div class="addrow"><input id="newLine" placeholder="New line" aria-label="New line" data-need><span class="cnt" id="newCnt"></span><button id="btnAddLine" data-need>Add</button></div>
+    <div class="btns"><button class="warn" id="btnResetText" data-need>Reset to defaults</button></div>
+  </div>
+</section>
+
+<section id="welcome">
+  <div class="card">
+    <h2>Boot welcome <small id="welState"></small></h2>
+    <p class="hint">Shown for about 3 seconds each time the watch is switched on, in the 40K and Titanfall 2 styles. Press MODE, SET or ADJ on the watch to skip it (the light button is the flashlight and does not skip). The 24H Standard style goes straight to the time.</p>
+    <p class="hint warnbox" id="welOld" hidden>This watch does not have the welcome screen yet. Update its firmware with the new files, then reconnect.</p>
+    <div id="welList"></div>
+  </div>
+</section>
+
+<section id="colors">
+  <div class="card">
+    <h2>Colours</h2>
+    <p class="sub" id="colorsInfo">Theme colours are built into the firmware. To change them, edit <code>watch_fw/theme_config.h</code> (each colour is <code>RGB(r, g, b)</code>) and upload the sketch again. The style buttons at the top only change this page.</p>
+    <div id="palettes"></div>
+  </div>
+</section>
+
+<section id="status">
+  <div class="card">
+    <h2>Battery</h2>
+    <div class="big" id="battPct">--%</div>
+    <div class="gauge"><i id="battBar" style="width:0"></i></div>
+    <p class="hint" id="battMv"></p>
+  </div>
+  <div class="card">
+    <h2>Watch</h2>
+    <dl class="kv" id="kv"></dl>
+    <div class="row"><label for="ble">Bluetooth while the screen is on <small>(watch: Phone &rsaquo; Radio)</small></label><span class="switch"><input type="checkbox" id="ble" data-set="ble"><span></span></span></div>
+    <div class="row"><label for="url" class="lbl">QR code on the watch opens<br><input id="url" inputmode="url" data-need></label></div>
+    <div class="btns"><button class="ghost small" id="btnUrlHere" data-need>Use this page's address</button><button class="small" id="btnUrl" data-need>Save address</button></div>
+    <div class="btns"><button class="warn small" id="btnForget" data-need>Forget all paired phones</button></div>
+  </div>
+  <div class="card"><h2>Link log</h2><div class="log" id="log"></div></div>
+</section>
+</main>
+<footer id="verfoot">Watch MK1 settings page <span id="verTxt"></span></footer>
+<button class="upd" id="btnUpd" hidden>New version ready: tap to reload</button>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="application/json" id="default-lines">{"bless": ["Suffer not the|heretic to live", "Emperor be|with you", "Go with the|Omnissiah", "Your gears turn|true, pilgrim", "Walk in His light,|not your own", "The machine|spirit favours you", "Every step|is witnessed", "Doubt is rust.|Keep moving.", "The Throne has|marked your path", "Carry His will|into the dark", "Faith is the|truest bearing"], "callout": ["OUTNUMBERED. THINNING THEIR RANKS, WEAKEST FIRST.", "HOSTILES DETECTED. PRIORITIZING NEAREST THREAT.", "BARREL SPINNING UP. NOTHING CROSSES THIS ARC.", "AMMUNITION IS PLENTIFUL. TARGETS ARE NOT.", "PILOT, YOUR HEADING IS CONFIRMED.", "CORE ONLINE. AWAITING YOUR COMMAND.", "ENEMY TITAN SIGHTED. MOVING TO INTERCEPT.", "THEIR ARMOR IS FAILING. PRESS THE ADVANTAGE.", "SUPPRESSING FIRE. HOLD THIS LINE, PILOT.", "ACQUIRING TARGETS. THEY WILL NOT ACQUIRE US.", "NEURAL SYNC NOMINAL. MOVE WHEN READY.", "THE LINK HOLDS. YOU ARE NOT ALONE, PILOT."], "litany": ["THE COUNTING-ENGINE KEEPS ITS VIGIL", "EACH TICK AN OFFERING", "LET THE MOTIVE FORCE NOT WANE", "BLESSED BE THE STEADY GEAR"], "welcome": {"40k": "Welcome back, Inquisitor.", "tf": "Welcome back, Pilot. Controls are yours."}}</script>
+<script id="watch-proto">
+/* ===== WatchProto: protocol logic shared by the page, demo mode and the tests =====
+   No DOM in here. tools/test_page_protocol.mjs loads this exact <script> block in
+   Node and runs it against the watch firmware's own command parser. */
+(function (root) {
+  'use strict';
+  const P = {};
+  P.SVC = '7a3f0001-5c2e-4b8a-9d1e-2f6b8c4a1e01';
+  P.RX = '7a3f0002-5c2e-4b8a-9d1e-2f6b8c4a1e01';
+  P.TX = '7a3f0003-5c2e-4b8a-9d1e-2f6b8c4a1e01';
+  P.FIRST = 0x80; P.LAST = 0x40; P.SEQ = 0x3f;
+  P.LIMITS = { bless: 40, callout: 50, litany: 48 };
+  P.MAX_LINES = 24;
+  P.WELCOME = { max: 60, ms: 3000, ids: ['40k', 'tf'], names: { '40k': '40K (Cogitator)', tf: 'Titanfall 2 (Pilot HUD)' } };
+  P.LIST_NAMES = { bless: 'Blessings', callout: 'Titan callouts', litany: 'Litany' };
+  const enc = new TextEncoder(), dec = new TextDecoder();
+
+  // ---- framing (mirror of watch_fw/bleframe.cpp) ----
+  P.encode = function (text, chunkMax) {
+    const b = enc.encode(text);
+    chunkMax = Math.min(chunkMax, 512);
+    if (chunkMax < 2) throw new Error('chunk too small');
+    const per = chunkMax - 1, out = [];
+    let pos = 0, n = 0;
+    do {
+      const k = Math.min(per, b.length - pos);
+      const c = new Uint8Array(k + 1);
+      let h = n & P.SEQ;
+      if (pos === 0) h |= P.FIRST;
+      if (pos + k >= b.length) h |= P.LAST;
+      c[0] = h; c.set(b.subarray(pos, pos + k), 1);
+      out.push(c); pos += k; n++;
+    } while (pos < b.length);
+    return out;
+  };
+  P.Reassembler = class {
+    constructor(cap) { this.cap = cap || 16384; this.reset(); this.error = ''; }
+    reset() { this.parts = []; this.len = 0; this.next = 0; this.active = false; }
+    fail(why) { this.error = why; this.reset(); return { type: 'error', error: why }; }
+    feed(u8) {
+      if (!u8 || !u8.length) return this.fail('empty chunk');
+      const h = u8[0];
+      if (h & P.FIRST) { this.reset(); this.active = true; }
+      else if (!this.active) return this.fail('chunk without start');
+      if ((h & P.SEQ) !== this.next) return this.fail('chunk out of order');
+      if (this.len + u8.length - 1 + 1 > this.cap) return this.fail('message too long');
+      this.parts.push(u8.slice(1)); this.len += u8.length - 1;
+      this.next = (this.next + 1) & P.SEQ;
+      if (h & P.LAST) {
+        const all = new Uint8Array(this.len); let o = 0;
+        for (const p of this.parts) { all.set(p, o); o += p.length; }
+        this.reset();
+        return { type: 'message', text: dec.decode(all) };
+      }
+      return { type: 'none' };
+    }
+  };
+
+  // ---- text helpers ----
+  P.chars = s => [...s].length;                 // the watch counts characters, not bytes
+  P.cleanLine = function (list, s) {            // what the watch will store (mirror of TextLines::clean)
+    let out = '', n = 0, bars = 0, cut = false;
+    const max = P.LIMITS[list];
+    s = s.replace(/^[\u0000-\u0020]+/, '');
+    for (let ch of s) {
+      if (ch.length === 1 && (ch < ' ' || ch === '\u007f')) ch = ' ';
+      if (ch === '|') { if (list !== 'bless' || out === '' || bars++) continue; }
+      if (n >= max) { cut = true; break; }
+      out += ch; n++;
+    }
+    out = out.replace(/[ |]+$/, '');
+    if (cut) { let a = [...out]; a = a.slice(0, max - 1); out = a.join('').replace(/ +$/, '') + '\u2026'; }
+    return out;
+  };
+  // What the watch stores for a boot welcome message (mirror of WelcomeText::clean in welcometext.cpp):
+  // control chars and runs of spaces -> one space, curly quotes / dashes -> plain ones, characters the
+  // watch fonts lack are dropped, 60 characters at most (a longer text is cut with the ellipsis).
+  P.cleanWelcome = function (s) {
+    const MAP = { 0x2018: 0x27, 0x201C: 0x22, 0x201D: 0x22, 0x2013: 0x2d, 0x2014: 0x2d, 0x2212: 0x2d, 0xA0: 0x20, 0x7C: 0x20 };
+    const drawable = c => (c >= 0x20 && c <= 0x7E) || c === 0x2026 || c === 0xB7 || c === 0x2019 || c === 0xB0;
+    const max = P.WELCOME.max, out = [];
+    let cut = false;
+    for (const ch of String(s)) {
+      let c = ch.codePointAt(0);
+      if (MAP[c] !== undefined) c = MAP[c];
+      if (c < 0x20 || c === 0x7F) c = 0x20;
+      if (!drawable(c)) continue;
+      if (c === 0x20) { if (!out.length || out[out.length - 1] === ' ' || out.length >= max) continue; }
+      else if (out.length >= max) { cut = true; break; }
+      out.push(String.fromCharCode(c));
+    }
+    while (out.length && out[out.length - 1] === ' ') out.pop();
+    if (cut) {
+      while (out.length >= max) out.pop();
+      while (out.length && out[out.length - 1] === ' ') out.pop();
+      out.push('\u2026');
+    }
+    return out.join('');
+  };
+  P.parseList = function (reply) {              // "OK n\nline\n..." -> [lines]
+    if (!reply.startsWith('OK ')) throw new Error(reply);
+    const rows = reply.split('\n'); rows.shift();
+    return rows;
+  };
+  P.parseGetText = function (reply) {          // "OK <text>" -> text
+    if (!reply.startsWith('OK ')) throw new Error(reply);
+    return reply.slice(3);
+  };
+  P.parseJson = function (reply) {
+    if (!reply.startsWith('OK ')) throw new Error(reply);
+    return JSON.parse(reply.slice(3));
+  };
+
+  // ---- command builders ----
+  const pad2 = n => String(n).padStart(2, '0');
+  P.cmd = {
+    hello: () => 'HELLO',
+    auth: code => 'AUTH ' + String(code).trim(),
+    get: () => 'GET',
+    set: (k, v) => `SET ${k} ${v}`,
+    face: id => 'FACE ' + id,
+    alarm: (i, a) => `ALARM ${i} ${a.on ? 1 : 0} ${pad2(a.h)}:${pad2(a.m)} ${a.days & 127} ${a.snd}`,
+    clearAlarm: i => `ALARM ${i} CLEAR`,
+    play: id => 'PLAY ' + id,
+    role: r => 'ROLE ' + r,
+    stop: () => 'STOP',
+    time: (utcSec, tz) => `TIME ${utcSec} ${tz}`,
+    url: u => 'URL ' + (u || 'RESET'),
+    textList: l => `TEXT LIST ${l}`,
+    textAdd: (l, s) => `TEXT ADD ${l} ${s.replace(/[\r\n]+/g, ' ')}`,
+    textSet: (l, i, s) => `TEXT SET ${l} ${i} ${s.replace(/[\r\n]+/g, ' ')}`,
+    textDel: (l, i) => `TEXT DEL ${l} ${i}`,
+    textMove: (l, a, b) => `TEXT MOVE ${l} ${a} ${b}`,
+    textReset: l => `TEXT RESET ${l}`,
+    welcomeSet: (t, s) => `WELCOME SET ${t} ${s.replace(/[\r\n]+/g, ' ')}`,
+    welcomeReset: t => `WELCOME RESET ${t}`,
+    welcomeShow: t => `WELCOME SHOW ${t}`,
+    forget: () => 'FORGET',
+    bye: () => 'BYE',
+  };
+  P.DEFAULT_ALARM = { on: 0, h: 7, m: 0, days: 62, snd: 255 };
+  P.alarmFree = a => !a.on && a.h === 7 && a.m === 0 && a.days === 62 && a.snd === 255;
+  P.daysText = function (d) {
+    if (d === 0) return 'Once';
+    if (d === 127) return 'Every day';
+    if (d === 62) return 'Weekdays';
+    if (d === 65) return 'Weekends';
+    const n = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return n.filter((_, i) => d & (1 << i)).join(' ');
+  };
+
+  // ---- time zone -> POSIX TZ rule (the watch applies DST changes by itself) ----
+  const fmtCache = {};
+  P.offsetAt = function (zone, ms) {            // seconds east of UTC at instant ms
+    const f = fmtCache[zone] || (fmtCache[zone] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', second: 'numeric' }));
+    const t = Math.floor(ms / 1000) * 1000, v = {};
+    for (const p of f.formatToParts(new Date(t))) v[p.type] = p.value;
+    const asUtc = Date.UTC(+v.year, +v.month - 1, +v.day, +v.hour % 24, +v.minute, +v.second);
+    return Math.round((asUtc - t) / 1000);
+  };
+  const posixOff = s => {                       // seconds -> POSIX h[:mm[:ss]] (sign as written)
+    const neg = s < 0; s = Math.abs(s);
+    const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60;
+    return (neg ? '-' : '') + h + (m || x ? ':' + pad2(m) : '') + (x ? ':' + pad2(x) : '');
+  };
+  const tzName = off => {                       // <+0530>, <-08>
+    const a = Math.abs(off), h = Math.floor(a / 3600), m = Math.floor(a / 60) % 60;
+    return '<' + (off < 0 ? '-' : '+') + pad2(h) + (m ? pad2(m) : '') + '>';
+  };
+  const ruleOf = (tUtcMs, offBefore) => {       // transition -> Mm.w.d/time (local time before the change)
+    const d = new Date(tUtcMs + offBefore * 1000);
+    const y = d.getUTCFullYear(), mo = d.getUTCMonth() + 1, day = d.getUTCDate();
+    const dim = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    let w = Math.ceil(day / 7); if (day + 7 > dim) w = 5;
+    const secs = d.getUTCHours() * 3600 + d.getUTCMinutes() * 60 + d.getUTCSeconds();
+    return `M${mo}.${w}.${d.getUTCDay()}/${posixOff(secs)}`;
+  };
+  P.findTransitions = function (zone, year) {
+    const out = [], step = 6 * 3600 * 1000;
+    let t = Date.UTC(year, 0, 1), end = Date.UTC(year + 1, 0, 1), o = P.offsetAt(zone, t);
+    for (; t < end; t += step) {
+      const o2 = P.offsetAt(zone, t + step);
+      if (o2 !== o) {
+        let lo = t, hi = t + step;                // offset(lo) = o, offset(hi) = o2
+        while (hi - lo > 1000) { const mid = Math.floor((lo + hi) / 2000) * 1000; if (P.offsetAt(zone, mid) === o) lo = mid; else hi = mid; }
+        out.push({ t: hi, before: o, after: o2 });
+        o = o2;
+      }
+    }
+    return out;
+  };
+  P.posixTz = function (zone, year) {
+    const tr = P.findTransitions(zone, year);
+    if (tr.length === 2 && tr[0].before === tr[1].after && tr[0].after === tr[1].before) {
+      const up = tr[0].after > tr[0].before ? tr[0] : tr[1], down = up === tr[0] ? tr[1] : tr[0];
+      const std = up.before, dst = up.after;
+      return tzName(std) + posixOff(-std) + tzName(dst) + posixOff(-dst) + ',' + ruleOf(up.t, std) + ',' + ruleOf(down.t, dst);
+    }
+    const now = tr.length ? tr[tr.length - 1].after : P.offsetAt(zone, Date.UTC(year, 6, 1));
+    return tzName(now) + posixOff(-now);          // no DST (or an irregular year): fixed offset
+  };
+  P.localZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) { return 'UTC'; } };
+
+  // base64 decode with the firmware's rules (linkfile.cpp base64Decode): null if invalid or longer than cap.
+  P.b64decode = function (s, cap) {
+    const out = []; let acc = 0, bits = 0, pad = false;
+    for (const ch of s) {
+      if (ch === '=') { pad = true; continue; }
+      const v = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.indexOf(ch);
+      if (v < 0 || pad) return null;
+      acc = ((acc << 6) | v) & 0xFFFFFF; bits += 6;
+      if (bits >= 8) { bits -= 8; if (out.length >= cap) return null; out.push((acc >> bits) & 255); }
+    }
+    if (bits >= 6) return null;
+    return Uint8Array.from(out);
+  };
+
+  // ---- client: one command at a time over any transport ----
+  P.Client = class {
+    constructor(transport) {
+      this.t = transport; this.queue = Promise.resolve(); this.pending = null;
+      this.rx = new P.Reassembler(); this.onEvent = null; this.onLog = null; this.timeoutMs = 8000;
+      this.late = []; this.sync = null;   // commands that timed out {t, json}: their reply may still arrive
+      transport.onChunk = c => this.chunk(c);
+    }
+    // The link has no request ids, so a reply to a command we gave up on (timed out) could be taken for the answer to the NEXT
+    // command. After a timeout the next command is therefore preceded by a PING: the link is in order, so once the PING's own
+    // answer (a JSON "OK {...}") has arrived, every late reply has arrived or been lost. Replies in between are thrown away.
+    async resync() {
+      const now = Date.now();
+      this.late = this.late.filter(l => now - l.t < 20000);
+      if (!this.late.length) return;
+      const need = this.late.filter(l => l.json).length + 1;   // the late JSON answers, then the PING's own
+      this.log('checking the link after a missed reply');
+      await new Promise(res => {
+        let seen = 0;
+        const done = () => { clearTimeout(timer); this.sync = null; res(); };
+        const timer = setTimeout(done, 3000);
+        this.sync = text => { this.log('ignored a reply to an earlier command'); if (/^OK \{/.test(text) && ++seen >= need) done(); };
+        this.t.write(P.encode('PING', this.t.chunkMax || 20)).catch(done);
+      });
+      this.late = [];
+    }
+    chunk(u8) {
+      const r = this.rx.feed(u8);
+      if (r.type === 'error') { this.log('!! ' + r.error); if (this.pending) { const p = this.pending; this.pending = null; p.reject(new Error('link: ' + r.error)); } }
+      if (r.type !== 'message') return;
+      this.log('<- ' + r.text.split('\n')[0].slice(0, 140));
+      if (r.text.startsWith('EVT')) { if (this.onEvent) this.onEvent(r.text); return; }
+      if (this.sync) { this.sync(r.text); return; }
+      if (!this.pending && this.late.length) { this.late.shift(); this.log('late reply to an earlier command arrived'); return; }
+      if (this.pending) { const p = this.pending; this.pending = null; p.resolve(r.text); }
+    }
+    log(s) { if (this.onLog) this.onLog(s); }
+    send(cmd) {
+      const run = async () => { if (this.late.length) await this.resync(); return new Promise((resolve, reject) => {
+        const json = /^(HELLO|PING|GET)(\s|$)/.test(cmd);
+        const timer = setTimeout(() => {
+          if (this.pending) { this.pending = null; this.late.push({ t: Date.now(), json }); if (this.late.length > 4) this.late.shift(); reject(new Error('no reply from the watch')); }
+        }, this.timeoutMs);
+        this.pending = { resolve: v => { clearTimeout(timer); resolve(v); }, reject: e => { clearTimeout(timer); reject(e); } };
+        this.log('-> ' + (cmd.startsWith('AUTH') ? 'AUTH ******' : cmd));
+        this.t.write(P.encode(cmd, this.t.chunkMax || 20)).catch(e => { if (this.pending) { this.pending = null; clearTimeout(timer); reject(e); } });
+      }); };
+      const p = this.queue.then(run, run);
+      this.queue = p.catch(() => {});
+      return p;
+    }
+    async ok(cmd) { const r = await this.send(cmd); if (!r.startsWith('OK')) throw new Error(r.replace(/^ERR\s*/, '')); return r; }
+  };
+
+  // ---- demo watch: answers like the firmware (tests compare the two) ----
+  P.MockWatch = class {
+    constructor(defaults) {
+      this.defs = defaults; this.authed = false; this.fails = 0; this.pairing = false; this.pin = 0; this.tokens = [];
+      this.pairFails = 0; this.lockedAt = 0; this.nowMs = () => Date.now();   // pairing lockout like the watch's (tests replace nowMs)
+      this.local = Math.floor(Date.now() / 1000) - new Date().getTimezoneOffset() * 60; this.tz = ''; this.off = 0;
+      this.url = 'https://talkinmuffin.github.io/watch/'; this.log = [];
+      this.s = { face: '24h', disp: { bright: 3, dim: 1, autodim: 5, off: 10, raise: 1, h24: 0, sec: 1, rot: 0 },
+        snd: { vol: 3, pack: 0, voice: 0, hourly: 0, keybeep: 0, snooze: 5 }, ble: 0, decl: 0,
+        alarms: [0, 1, 2, 3, 4].map(() => Object.assign({}, P.DEFAULT_ALARM)) };
+      this.text = { bless: defaults.bless.slice(), callout: defaults.callout.slice(), litany: defaults.litany.slice() };
+      this.custom = { bless: 0, callout: 0, litany: 0 };
+      const wd = defaults.welcome || {};
+      this.welcome = { '40k': wd['40k'] || '', tf: wd.tf || '' }; this.welcomeCustom = { '40k': 0, tf: 0 };
+      this.faces = [['24h', '24H'], ['cogitator', '40K'], ['pilothud', 'TF HUD'], ['digital', 'DIGITAL']];
+      this.sounds = [[255, 'THEME'], [16, 'STD CHIME'], [17, 'STD BELL'], [20, '40K CLAXON'], [21, '40K ALERT'], [22, '40K CANT'], [23, '40K VOX'],
+        [24, 'TF CORE'], [25, 'TF CHIRP'], [26, 'TF HUD'], [27, 'TF VOX'], [0, 'BEEP'], [1, 'CHIME'], [2, 'KLAXON'], [3, 'PULSE'],
+        [30, 'CUSTOM 1'], [31, 'CUSTOM 2'], [32, 'CUSTOM 3']];
+      this.batt = 72; this.files = {}; this.up = null;
+    }
+    // LittleFS stand-in, as tests/fake_link_hooks.h: shipped files ~725000 B + your clips in whole 4 KB blocks.
+    fsUsed() { let u = 725000; const b = n => Math.ceil(n / 4096) * 4096; for (const k in this.files) u += b(this.files[k].length); if (this.up) u += b(this.up.len); return u; }
+    fileCmd(rest) {
+      const SL = root.SoundLab, ok = x => 'OK' + (x === undefined ? '' : ' ' + x), err = m => 'ERR ' + m;
+      const w = rest.split(/ +/).filter(Boolean), sub = (w[0] || '').toUpperCase().slice(0, 7), total = 1572864, used = this.fsUsed();
+      const drop = () => { this.up = null; };
+      const isInt = t => /^[+-]?\d+$/.test(t || '');
+      if (sub === 'LIST') {
+        const order = [];
+        for (const p of ['std', '40k', 'tf']) for (const r of SL.ROLES) order.push(`/user/${p}/${r}.wav`);
+        for (let n = 1; n <= 3; n++) order.push(`/user/custom${n}.wav`);
+        for (let i = 1; i <= 24; i++) { const k = String(i).padStart(2, '0'); order.push(`/user/40k/bless${k}.wav`, `/user/tf/call${k}.wav`); }
+        const files = order.filter(p => this.files[p]).map(p => ({ p, s: this.files[p].length }));
+        return ok(JSON.stringify({ free: Math.max(0, total - used), total, chunk: 1536, files }));
+      }
+      if (sub === 'PUT') {
+        const [, path, ws, wc] = w;
+        if (!SL.isSlot(path || '')) return err('not a clip name (see README Custom sounds)');
+        if (!isInt(ws) || +ws < 44 || +ws > 8 * 1024 * 1024) return err('bad size');
+        if (!wc || wc.length !== 8 || !/^[+-]?(0[xX])?[0-9a-fA-F]+$/.test(wc)) return err('bad crc');
+        const need = Math.ceil(+ws / 4096) * 4096 + 8192, free = Math.max(0, total - used);
+        if (need > free) return err(`no room: needs ${Math.floor(need / 1024)} KB, ${Math.floor(free / 1024)} KB free`);
+        this.up = { path, size: +ws, crc: parseInt(wc, 16) >>> 0, parts: [], len: 0 };
+        return ok(1536);
+      }
+      if (sub === 'DATA') {
+        if (!this.up) return err('no upload (FILE PUT first)');
+        if (!isInt(w[1]) || +w[1] !== this.up.len) return err('offset: expected ' + this.up.len);
+        const d = P.b64decode(w.slice(2).join(' '), 1536);
+        if (!d || !d.length) { drop(); return err('bad data'); }
+        if (this.up.len + d.length > this.up.size) { drop(); return err('more data than the size'); }
+        this.up.parts.push(d); this.up.len += d.length;
+        return ok(this.up.len);
+      }
+      if (sub === 'END') {
+        const u = this.up;
+        if (!u) return err('no upload');
+        drop();
+        if (u.len !== u.size) return err('file incomplete');
+        const all = new Uint8Array(u.len); let o = 0; for (const d of u.parts) { all.set(d, o); o += d.length; }
+        if (SL.crc32(all) !== u.crc) return err('crc mismatch');
+        const c = SL.watchCheck(all);
+        if (c.err) return err(`not a WAV the watch can play (${c.error})`);
+        this.log.push('stop');
+        this.files[u.path] = all;
+        return ok(`${u.path} ${u.size}`);
+      }
+      if (sub === 'ABORT') { drop(); return ok(); }
+      if (sub === 'DEL') {
+        const path = w[1] || '';
+        if (!SL.isSlot(path)) return err('not a clip name');
+        if (!this.files[path]) return err('no such file');
+        this.log.push('stop'); delete this.files[path]; return ok();
+      }
+      return err('FILE LIST|PUT|DATA|END|ABORT|DEL');
+    }
+    lockMsLeft() { if (!this.lockedAt) return 0; const el = this.nowMs() - this.lockedAt; return el >= 300000 ? 0 : 300000 - el; }
+    // "locked" = this connection (5 wrong PINs); "locked <secs>" = the watch stopped pairing (15 wrong PINs), secs left
+    lockedText() { const ms = this.lockMsLeft(); return ms ? 'locked ' + Math.ceil(ms / 1000) : 'locked'; }
+    newConnection() { this.authed = false; this.fails = 0; }
+    startPairing() {
+      if (this.lockMsLeft()) return 0;             // refused during the lockout, like the watch
+      this.lockedAt = 0; this.pairFails = 0;
+      this.pin = 100000 + Math.floor(Math.random() * 900000); this.pairing = true; return this.pin;
+    }
+    get() {
+      const s = this.s;
+      return { proto: 1, fw: '0.4.2-fixes', name: 'WATCH MK1',
+        time: { local: this.local, valid: 1, tz: this.tz, off: this.off }, batt: { pct: this.batt, mv: 3912 }, face: s.face,
+        faces: this.faces.map(([id, name]) => ({ id, name })), disp: Object.assign({}, s.disp),
+        snd: Object.assign({}, s.snd, { now: 0, packs: ['AUTO', 'STD', '40K', 'TF', 'BEEPS'],
+          sounds: this.sounds.map(([id, name]) => ({ id, name })), roles: ['alarm', 'alert', 'key', 'confirm', 'hour', 'voice'] }),
+        alarms: s.alarms.map(a => Object.assign({}, a)),
+        text: { bless: { n: this.text.bless.length, max: 40, custom: this.custom.bless }, callout: { n: this.text.callout.length, max: 50, custom: this.custom.callout },
+          litany: { n: this.text.litany.length, max: 48, custom: this.custom.litany }, lines: 24 },
+        welcome: { max: P.WELCOME.max, ms: P.WELCOME.ms, '40k': { text: this.welcome['40k'], custom: this.welcomeCustom['40k'] }, tf: { text: this.welcome.tf, custom: this.welcomeCustom.tf } },
+        url: this.url, ble: s.ble, phones: this.tokens.length, colors: 0, fs: { used: this.fsUsed(), total: 1572864 } };
+    }
+    handle(line) {
+      const w = line.trim().split(/ +/), verb = (w[0] || '').toUpperCase(), rest = line.trim().slice(w[0] ? w[0].length : 0).trim();
+      const ok = (x) => 'OK' + (x === undefined ? '' : ' ' + x), err = m => 'ERR ' + m;
+      if (!verb) return err('empty');
+      if (verb === 'HELLO' || verb === 'PING') return ok(JSON.stringify({ proto: 1, fw: '0.4.2-fixes', name: 'WATCH MK1', auth: this.authed ? 1 : 0, pairing: this.pairing ? 1 : 0 }));
+      if (verb === 'AUTH') {
+        if (this.fails >= 5) return err(this.lockedText());
+        const a = w[1] || '';
+        if (/^\d{6}$/.test(a) && this.pairing && +a === this.pin) {
+          const tok = Array.from({ length: 16 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+          this.tokens.push(tok); if (this.tokens.length > 4) this.tokens.shift();
+          this.pairing = false; this.authed = true; this.fails = 0; this.s.ble = 1;
+          return 'OK TOKEN ' + tok;
+        }
+        if (this.tokens.includes(a.toLowerCase())) { this.authed = true; this.fails = 0; return ok(); }
+        let tooMany = false;                       // 15 wrong PINs in all: the watch stops pairing for 5 minutes
+        if (this.pairing && ++this.pairFails >= 15) { this.pairing = false; this.pin = 0; this.lockedAt = this.nowMs(); tooMany = true; }
+        if (++this.fails >= 5 || tooMany) return err(this.lockedText());
+        if (a.length !== 16 && this.lockMsLeft()) return err(this.lockedText());
+        return err(this.pairing ? 'auth' : 'auth (pair on the watch first)');
+      }
+      if (!this.authed) return err(this.fails >= 5 ? this.lockedText() : 'pair first (AUTH <pin>)');
+      const S = this.s;
+      if (verb === 'GET') return ok(JSON.stringify(this.get()));
+      if (verb === 'SET' || verb === 'FACE') {
+        const k = verb === 'FACE' ? 'face' : (w[1] || '').toLowerCase(), v = verb === 'FACE' ? (w[1] || '') : (w[2] || '');
+        if (k === 'face') { if (!this.faces.some(f => f[0] === v)) return err('unknown face'); S.face = v; return ok(); }
+        if (!/^-?\d+$/.test(v)) return err('bad value');
+        const x = +v;
+        const map = { bright: ['disp', 1, 5], dim: ['disp', 0, 3], autodim: ['disp', 0, 120], off: ['disp', 0, 240], raise: ['disp', 0, 1],
+          h24: ['disp', 0, 1], sec: ['disp', 0, 1], rot: ['disp', 0, 3], vol: ['snd', 0, 5], pack: ['snd', 0, 4], voice: ['snd', 0, 1],
+          hourly: ['snd', 0, 1], keybeep: ['snd', 0, 1], snooze: ['snd', 1, 30], ble: ['', 0, 1], decl: ['', -30, 30] };
+        const m = map[k];
+        if (!m) return err('unknown key');
+        if (x < m[1] || x > m[2]) return err('out of range');
+        if (m[0]) S[m[0]][k] = x; else S[k] = x;
+        return ok();
+      }
+      if (verb === 'ALARM') {
+        const i = w[1];
+        if (!/^\d+$/.test(i || '') || +i > 4) return err('bad alarm number');
+        if ((w[2] || '').toUpperCase() === 'CLEAR') { S.alarms[+i] = Object.assign({}, P.DEFAULT_ALARM); return ok(); }
+        if (!/^[01]$/.test(w[2] || '')) return err('on must be 0 or 1');
+        const t = /^(\d{1,2}):(\d{2})$/.exec(w[3] || '');
+        if (!t || +t[1] > 23 || +t[2] > 59) return err('time must be HH:MM');
+        if (!/^\d+$/.test(w[4] || '') || +w[4] > 127) return err('days must be 0..127');
+        if (!this.sounds.some(s => String(s[0]) === w[5])) return err('unknown sound');
+        S.alarms[+i] = { on: +w[2], h: +t[1], m: +t[2], days: +w[4], snd: +w[5] };
+        return ok();
+      }
+      if (verb === 'PLAY') { if (!this.sounds.some(s => String(s[0]) === w[1]) && w[1] !== '4') return err('unknown sound'); this.log.push('play ' + w[1]); return ok(); }
+      if (verb === 'ROLE') { if (!['alarm', 'alert', 'key', 'confirm', 'hour', 'voice'].includes(w[1])) return err('unknown role'); this.log.push('role ' + w[1]); return ok(); }
+      if (verb === 'STOP') { this.log.push('stop'); return ok(); }
+      if (verb === 'TIME') {
+        if (!/^-?\d+$/.test(w[1] || '')) return err('TIME <utc seconds> <TZ>');
+        const utc = +w[1], MIN = 1704067200, MAX = 4102444799;   // 2024-01-01 .. 2099-12-31: what the watch clock keeps
+        if (utc < MIN || utc > MAX || (!w[2] && !this.tz)) return err(this.tz || w[2] ? 'bad time or TZ rule' : 'send a TZ rule too');
+        const tzNew = w[2] || this.tz, off = P.mockOffset(tzNew, utc);
+        if (utc + off < MIN || utc + off > MAX) return err('bad time or TZ rule');   // local time must fit too
+        this.tz = tzNew;
+        this.off = off;
+        this.local = utc + off;
+        return ok(this.off);
+      }
+      if (verb === 'TZ') { if (!w[1]) return ok(this.tz); this.tz = w[1] === 'OFF' ? '' : w[1]; return ok(); }
+      if (verb === 'URL') {
+        if (!w[1]) return ok(this.url);
+        if (w[1] === 'RESET') { this.url = 'https://talkinmuffin.github.io/watch/'; return ok(this.url); }
+        if (!/^https?:\/\/[\x21-\x7e]+$/.test(w[1]) || w[1].length >= 120) return err('URL must start with https:// and be under 120 characters');
+        this.url = w[1]; return ok(this.url);
+      }
+      if (verb === 'FORGET') { this.tokens = []; this.authed = false; return ok(); }
+      if (verb === 'BYE') return ok();
+      if (verb === 'COLORS') return err('colours are set in theme_config.h');
+      if (verb === 'FILE') return this.fileCmd(rest);
+      if (verb === 'TEXT') return this.textCmd(rest);
+      if (verb === 'WELCOME') return this.welcomeCmd(rest);
+      return err('unknown command');
+    }
+    welcomeCmd(rest) {
+      const m = /^(\S*)\s*(\S*)\s*([\s\S]*)$/.exec(rest), sub = m[1].toUpperCase().slice(0, 7), t = m[2];
+      if (sub === 'MAX') return 'OK ' + P.WELCOME.max;
+      if (!P.WELCOME.ids.includes(t)) return 'ERR theme must be 40k or tf';
+      if (sub === 'SHOW') { this.log.push('welcome ' + P.WELCOME.ids.indexOf(t)); return 'OK'; }
+      if (sub === 'GET') return 'OK ' + this.welcome[t];
+      if (sub === 'RESET') { this.welcome[t] = this.defs.welcome[t]; this.welcomeCustom[t] = 0; return 'OK'; }
+      if (sub === 'SET') {
+        const c = P.cleanWelcome(m[3]);
+        if (!c) return 'ERR empty message';
+        this.welcome[t] = c; this.welcomeCustom[t] = 1; return 'OK';
+      }
+      return 'ERR unknown command';
+    }
+    textCmd(rest) {
+      const m = /^(\S*)\s*(\S*)\s*(.*)$/.exec(rest), verb = m[1].toUpperCase(), l = m[2];
+      let tail = m[3];
+      if (!P.LIMITS[l]) return 'ERR list must be bless, callout or litany';
+      const L = this.text[l], done = () => { this.custom[l] = 1; return 'OK'; };
+      if (verb === 'LIST') return 'OK ' + L.length + L.map(s => '\n' + s).join('');
+      if (verb === 'MAX') return `OK ${P.LIMITS[l]} 24`;
+      if (verb === 'ADD') { const c = P.cleanLine(l, tail); if (!c || L.length >= 24) return 'ERR empty line or list full'; L.push(c); return done(); }
+      if (verb === 'RESET') { this.text[l] = this.defs[l].slice(); this.custom[l] = 0; return 'OK'; }
+      const a = /^(\S*)\s*(.*)$/.exec(tail); tail = a[2];
+      if (!/^\d{1,3}$/.test(a[1])) return 'ERR bad index';
+      const i = +a[1];
+      if (verb === 'INS') { const c = P.cleanLine(l, tail); if (!c || L.length >= 24 || i > L.length) return 'ERR bad index, empty line or list full'; L.splice(i, 0, c); return done(); }
+      if (verb === 'SET') { const c = P.cleanLine(l, tail); if (!c || i >= L.length) return 'ERR bad index or empty line'; L[i] = c; return done(); }
+      if (verb === 'DEL') { if (i >= L.length || L.length <= 1) return 'ERR bad index or last line'; L.splice(i, 1); return done(); }
+      if (verb === 'MOVE') {
+        const b = (/^(\S*)/.exec(tail) || [''])[0];
+        if (!/^\d{1,3}$/.test(b)) return 'ERR bad index';
+        const j = +b; if (i >= L.length || j >= L.length) return 'ERR bad index';
+        const [x] = L.splice(i, 1); L.splice(j, 0, x); return done();
+      }
+      return 'ERR unknown command';
+    }
+  };
+  // Demo-only offset: the demo watch trusts the phone (the real watch parses the rule).
+  P.mockOffset = (tz, utc) => { try { return P.offsetAt(P.localZone(), utc * 1000); } catch (e) { return 0; } };
+
+  // A transport that runs MockWatch through the same framing as Bluetooth.
+  P.MockTransport = class {
+    constructor(watch, notifyChunk) { this.w = watch; this.chunkMax = 20; this.notifyMax = notifyChunk || 182; this.rx = new P.Reassembler(); this.onChunk = null; this.latency = 25; }
+    async fast() { this.chunkMax = 180; }
+    slow() { this.chunkMax = 20; }
+    async write(chunks) {
+      for (const c of chunks) {
+        const r = this.rx.feed(c);
+        if (r.type === 'message') {
+          const reply = this.w.handle(r.text);
+          setTimeout(() => { for (const k of P.encode(reply, this.notifyMax)) this.onChunk && this.onChunk(k); }, this.latency);
+        }
+      }
+    }
+  };
+
+  root.WatchProto = P;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script id="sound-lab">
+// ---- Sound Lab: the watch's audio rules in JavaScript (pure functions, tested in
+// tests/test_soundlab.mjs against the firmware's own C++ code) ----
+(function (root) {
+  'use strict';
+  const SL = {};
+  SL.RATE = 16000;                       // what we convert to (README "Custom sounds": 16 kHz mono 16-bit)
+  SL.SYNTH_RATE = 22050;                 // AUDIO_SAMPLE_RATE in config.h
+  SL.HEAD = 1024;                        // bytes of a WAV the player reads for the header (audio.cpp)
+  SL.BLOCK = 4096;                       // LittleFS block
+  SL.PARTITIONS = { std: { name: 'Default (1.5 MB)', bytes: 0x180000 }, big: { name: 'Big (3.9 MB, extras/partitions_bigfs.csv)', bytes: 0x3E0000 } };
+  SL.GAIN_Q8 = [0, 16, 32, 56, 90, 128];                 // snd::wavGainQ8
+  SL.SYNTH_AMP = [0, 1200, 2400, 4200, 6500, 9000];      // snd::synthAmp
+  SL.PACKS = ['std', '40k', 'tf', 'classic'];
+  SL.PACK_NAMES = { std: 'Standard', '40k': '40K', tf: 'Titanfall', classic: 'Beeps (built-in tones)' };
+  SL.ROLES = ['alarm', 'alert', 'key', 'confirm', 'hour', 'voice'];
+  SL.ROLE_NAMES = { alarm: 'Alarm', alert: 'Alert', key: 'Key click', confirm: 'Confirm', hour: 'Hourly chime', voice: 'Voice line' };
+  // soundpacks.cpp kSynth: the tone used when no file exists (-1 = silent)
+  SL.KSYNTH = { std: [1, 0, 4, 1, 1, -1], '40k': [2, 3, 4, 1, 2, -1], tf: [3, 0, 4, 1, 3, -1], classic: [0, 3, 4, 1, 0, -1] };
+  SL.SYNTH_NAMES = ['BEEP', 'CHIME', 'KLAXON', 'PULSE', 'KEY'];
+  // soundpacks.cpp kEntries: alarm-pickable pack clips
+  SL.ENTRIES = { 16: ['std', 'alarm'], 17: ['std', 'alert'], 20: ['40k', 'alarm'], 21: ['40k', 'alert'], 22: ['40k', 'hour'], 23: ['40k', 'voice'],
+    24: ['tf', 'alarm'], 25: ['tf', 'alert'], 26: ['tf', 'hour'], 27: ['tf', 'voice'] };
+  SL.ERR = ['ok', 'too short', 'not RIFF', 'not WAVE', 'no fmt chunk', 'not PCM', '1 or 2 channels only', '8 or 16 bit only', '8000-48000 Hz only', 'no data chunk'];
+
+  // audio.cpp synth patterns: [f0, f1, ms, wave] wave 0 sine, 1 square, 2 triangle
+  const PAT = [
+    [[2730, 2730, 70, 1], [0, 0, 60, 0], [2730, 2730, 70, 1], [0, 0, 600, 0]],
+    [[1047, 1047, 160, 0], [1319, 1319, 160, 0], [1568, 1568, 320, 0], [0, 0, 700, 0]],
+    [[620, 540, 380, 2], [460, 400, 380, 2], [620, 540, 380, 2], [460, 400, 380, 2], [0, 0, 350, 0]],
+    [[900, 1800, 90, 1], [0, 0, 40, 0], [900, 1800, 90, 1], [0, 0, 40, 0], [900, 1800, 90, 1], [0, 0, 500, 0]],
+    [[3200, 3200, 12, 1]]];
+  // Same maths as Audio::playSynth (float32 phase), samples scaled to -1..1 at amp 32767.
+  SL.synth = function (id, amp) {
+    const p = PAT[id] || PAT[0], R = SL.SYNTH_RATE, f32 = Math.fround;
+    let n = 0; for (const nt of p) n += Math.floor(nt[2] * R / 1000);
+    const out = new Float32Array(n); let o = 0, phase = 0;
+    for (const [f0, f1, ms, wave] of p) {
+      const total = Math.floor(ms * R / 1000), edge = Math.floor(R / 200);
+      for (let k = 0; k < total; k++) {
+        let s = 0;
+        if (f0) {
+          const t = f32(k / total), f = f32(f0 + f32((f1 - f0) * t));
+          phase = f32(phase + f32(f / R)); if (phase >= 1) phase = f32(phase - 1);
+          if (wave === 0) s = Math.sin(phase * 2 * Math.PI); else if (wave === 1) s = phase < 0.5 ? 0.6 : -0.6; else s = 4 * Math.abs(phase - 0.5) - 1;
+          let env = 1; if (k < edge) env = k / edge; if (total - k < edge) env = Math.min(env, (total - k) / edge);
+          s *= env;
+        }
+        out[o++] = Math.trunc(s * amp) / 32768;
+      }
+    }
+    return out;
+  };
+
+  // wav.cpp wavParse, line for line. head = Uint8Array (first bytes), fileSize = whole file.
+  SL.parseWav = function (h, fileSize) {
+    const n = h.length, le32 = p => (h[p] | (h[p + 1] << 8) | (h[p + 2] << 16) | (h[p + 3] << 24)) >>> 0, le16 = p => h[p] | (h[p + 1] << 8);
+    const tag = (p, s) => h[p] === s.charCodeAt(0) && h[p + 1] === s.charCodeAt(1) && h[p + 2] === s.charCodeAt(2) && h[p + 3] === s.charCodeAt(3);
+    const E = e => ({ err: e, error: SL.ERR[e] });
+    if (n < 12) return E(1);
+    if (!tag(0, 'RIFF')) return E(2);
+    if (!tag(8, 'WAVE')) return E(3);
+    let fmt = null, pos = 12;
+    while (pos + 8 <= n) {
+      const sz = le32(pos + 4);
+      if (tag(pos, 'fmt ')) {
+        if (sz < 16 || pos + 8 + 16 > n) return E(4);
+        let f = le16(pos + 8);
+        if (f === 0xFFFE && sz >= 40 && pos + 8 + 26 <= n) f = le16(pos + 8 + 24);
+        if (f !== 1) return E(5);
+        fmt = { channels: le16(pos + 10), rate: le32(pos + 12), bits: le16(pos + 22) };
+        if (fmt.channels < 1 || fmt.channels > 2) return E(6);
+        if (fmt.bits !== 8 && fmt.bits !== 16) return E(7);
+        if (fmt.rate < 8000 || fmt.rate > 48000) return E(8);
+      } else if (tag(pos, 'data')) {
+        if (!fmt) return E(4);
+        const off = pos + 8, avail = fileSize > off ? fileSize - off : 0, fb = fmt.channels * fmt.bits / 8;
+        let bytes = Math.min(sz, avail); bytes -= bytes % fb;
+        if (!bytes) return E(9);
+        return Object.assign({ err: 0, error: 'ok', dataOffset: off, dataBytes: bytes, frames: bytes / fb }, fmt);
+      }
+      const next = pos + 8 + sz + (sz & 1);
+      if (next > 0xFFFFFFFF) break;
+      pos = next;
+    }
+    return E(fmt ? 9 : 4);
+  };
+  // What the watch would do with this file: parse only the first 1024 bytes, like audio.cpp.
+  SL.watchCheck = u8 => SL.parseWav(u8.subarray(0, SL.HEAD), u8.length);
+  // Samples of a parsed WAV as mono floats (wavToMono16 at unity gain, then / 32768).
+  SL.wavSamples = function (u8, info) {
+    const out = new Float32Array(info.frames), fb = info.channels * info.bits / 8, dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    for (let i = 0; i < info.frames; i++) {
+      const p = info.dataOffset + i * fb; let s;
+      if (info.bits === 16) { s = dv.getInt16(p, true); if (info.channels === 2) s = Math.trunc((s + dv.getInt16(p + 2, true)) / 2); }
+      else { s = (u8[p] - 128) * 256; if (info.channels === 2) s = Math.trunc((s + (u8[p + 1] - 128) * 256) / 2); }
+      out[i] = s / 32768;
+    }
+    return out;
+  };
+
+  // ---- conversion ----
+  SL.mixDown = function (chans) {
+    if (chans.length === 1) return Float32Array.from(chans[0]);
+    const n = chans[0].length, out = new Float32Array(n);
+    for (const c of chans) for (let i = 0; i < n; i++) out[i] += c[i] / chans.length;
+    return out;
+  };
+  // Windowed-sinc resampler (Blackman window, 32 taps each side, anti-alias cutoff when going down).
+  SL.resample = function (x, from, to) {
+    if (from === to) return Float32Array.from(x);
+    const ratio = to / from, fc = Math.min(1, ratio) * 0.94, half = 32;
+    const n = Math.floor(x.length * ratio), out = new Float32Array(n), span = half / fc;
+    for (let i = 0; i < n; i++) {
+      const c = i / ratio, lo = Math.max(0, Math.ceil(c - span)), hi = Math.min(x.length - 1, Math.floor(c + span));
+      let acc = 0, wsum = 0;
+      for (let j = lo; j <= hi; j++) {
+        const t = (j - c) * fc, a = Math.PI * t;
+        const sinc = t === 0 ? 1 : Math.sin(a) / a;
+        const w = 0.42 + 0.5 * Math.cos(Math.PI * t / half) + 0.08 * Math.cos(2 * Math.PI * t / half);
+        const k = sinc * w; acc += x[j] * k; wsum += k;
+      }
+      out[i] = wsum ? acc / wsum : 0;
+    }
+    return out;
+  };
+  SL.peak = x => { let p = 0; for (let i = 0; i < x.length; i++) { const a = Math.abs(x[i]); if (a > p) p = a; } return p; };
+  // First/last sample louder than thresholdDb (relative to full scale), with padding.
+  SL.findTrim = function (x, rate, thresholdDb = -42, padMs = 15) {
+    const th = Math.pow(10, thresholdDb / 20), pad = Math.round(rate * padMs / 1000);
+    let a = 0, b = x.length - 1;
+    while (a < x.length && Math.abs(x[a]) < th) a++;
+    while (b > a && Math.abs(x[b]) < th) b--;
+    if (a >= x.length) return [0, 0];
+    return [Math.max(0, a - pad), Math.min(x.length, b + 1 + pad)];
+  };
+  SL.fade = function (x, rate, ms = 5) {
+    const n = Math.min(Math.floor(rate * ms / 1000), Math.floor(x.length / 2));
+    for (let i = 0; i < n; i++) { const g = i / n; x[i] *= g; x[x.length - 1 - i] *= g; }
+    return x;
+  };
+  // 16-bit mono PCM WAV with the plain 44-byte header: RIFF, fmt (16), data. Nothing else.
+  SL.encodeWav = function (x, rate) {
+    const n = x.length, buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf), u8 = new Uint8Array(buf);
+    const str = (p, s) => { for (let i = 0; i < 4; i++) u8[p + i] = s.charCodeAt(i); };
+    str(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true);
+    dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); str(36, 'data'); dv.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) { const v = Math.round(Math.max(-1, Math.min(1, x[i])) * 32767); dv.setInt16(44 + i * 2, v, true); }
+    return u8;
+  };
+  // channels: Float32Array per channel at `rate`. opts: start/end (seconds, of the original), trim, normalize, peakDb, maxSec.
+  SL.convert = function (chans, rate, opts = {}) {
+    let x = SL.mixDown(chans);
+    const a = Math.max(0, Math.floor((opts.start || 0) * rate)), b = Math.min(x.length, opts.end != null ? Math.floor(opts.end * rate) : x.length);
+    x = x.subarray(a, Math.max(a, b));
+    x = SL.resample(x, rate, SL.RATE);
+    if (opts.trim !== false) { const [s, e] = SL.findTrim(x, SL.RATE); x = x.slice(s, e); }
+    if (opts.maxSec && x.length > opts.maxSec * SL.RATE) x = x.slice(0, Math.floor(opts.maxSec * SL.RATE));
+    const p = SL.peak(x), target = Math.pow(10, (opts.peakDb != null ? opts.peakDb : -3) / 20);
+    let gain = 1;
+    if (opts.normalize !== false && p > 0) gain = target / p;
+    else if (p > 1) gain = 1 / p;
+    if (gain !== 1) for (let i = 0; i < x.length; i++) x[i] *= gain;
+    SL.fade(x, SL.RATE, 5);
+    const wav = SL.encodeWav(x, SL.RATE);
+    return { wav, samples: x, rate: SL.RATE, seconds: x.length / SL.RATE, gainDb: 20 * Math.log10(gain || 1), peak: SL.peak(x) };
+  };
+
+  // ---- "watch speaker": a rough model of the 13 mm speaker in the case ----
+  // 2 x 2nd-order high-pass at 450 Hz (no bass from a 13 mm cone), 2nd-order low-pass
+  // at 6.5 kHz, then a soft limiter (the MAX98357A + tiny speaker compress loud peaks).
+  function biquad(x, rate, type, f, q) {
+    const w = 2 * Math.PI * f / rate, cs = Math.cos(w), al = Math.sin(w) / (2 * q);
+    let b0, b1, b2; const a0 = 1 + al, a1 = -2 * cs, a2 = 1 - al;
+    if (type === 'hp') { b0 = (1 + cs) / 2; b1 = -(1 + cs); b2 = (1 + cs) / 2; } else { b0 = (1 - cs) / 2; b1 = 1 - cs; b2 = (1 - cs) / 2; }
+    const out = new Float32Array(x.length); let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < x.length; i++) {
+      const y = (b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+      x2 = x1; x1 = x[i]; y2 = y1; y1 = y; out[i] = y;
+    }
+    return out;
+  }
+  SL.SPEAKER = { hp: 450, lp: 6500, knee: 0.5 };
+  SL.speaker = function (x, rate) {
+    let y = biquad(x, rate, 'hp', SL.SPEAKER.hp, 0.7071);
+    y = biquad(y, rate, 'hp', SL.SPEAKER.hp, 0.7071);
+    if (rate / 2 > SL.SPEAKER.lp) y = biquad(y, rate, 'lp', SL.SPEAKER.lp, 0.7071);
+    const k = SL.SPEAKER.knee;
+    for (let i = 0; i < y.length; i++) {
+      const a = Math.abs(y[i]);
+      if (a > k) y[i] = Math.sign(y[i]) * (k + (1 - k) * Math.tanh((a - k) / (1 - k)));
+    }
+    return y;
+  };
+
+  // ---- which file the watch plays (soundpacks.cpp candidates + audio.cpp fallbacks) ----
+  // have(path) -> true if that file exists (your clips; the shipped /snd files always exist).
+  SL.rolePlan = function (pack, role, have) {
+    const ri = SL.ROLES.indexOf(role), synth = (SL.KSYNTH[pack] || SL.KSYNTH.std)[ri];
+    if (pack === 'classic') return { synth };
+    const user = `/user/${pack}/${role}.wav`, shipped = `/snd/${pack}/${role}.wav`;
+    if (have(user)) return { path: user, synth };
+    if (have(shipped)) return { path: shipped, synth };
+    return { synth };
+  };
+  // id = alarm sound id, pack = the pack in use ('std'|'40k'|'tf'|'classic').
+  SL.alarmPlan = function (id, pack, have) {
+    if (id === 255) return SL.rolePlan(pack, 'alarm', have);
+    if (id < 5) return { synth: id };
+    if (id >= 30 && id <= 32) { const p = `/user/custom${id - 29}.wav`; return have(p) ? { path: p, synth: 0 } : { synth: 0 }; }
+    const e = SL.ENTRIES[id];
+    if (!e) return { synth: 0 };
+    const r = SL.rolePlan(e[0], e[1], have);
+    if (r.synth < 0) r.synth = SL.KSYNTH[e[0]][1];
+    return r;
+  };
+  // Settings pack (0 AUTO, 1 STD, 2 40K, 3 TF, 4 BEEPS) + face -> pack in use (snd::effectivePack).
+  SL.packInUse = (setting, face) => setting >= 1 && setting <= 4 ? SL.PACKS[setting - 1] : ({ cogitator: '40k', pilothud: 'tf' }[face] || 'std');
+
+  // Every file name the watch looks for in /user (also what FILE PUT accepts: LinkApi::clipPath).
+  SL.slots = function () {
+    const s = [];
+    for (const p of ['std', '40k', 'tf']) for (const r of SL.ROLES) s.push({ path: `/user/${p}/${r}.wav`, label: `${SL.PACK_NAMES[p]}: ${SL.ROLE_NAMES[r]}`, group: SL.PACK_NAMES[p] });
+    for (let n = 1; n <= 3; n++) s.push({ path: `/user/custom${n}.wav`, label: `CUSTOM ${n} (pick it for any alarm)`, group: 'Custom' });
+    for (let i = 1; i <= 24; i++) s.push({ path: `/user/40k/bless${String(i).padStart(2, '0')}.wav`, label: `40K blessing ${i} (spoken)`, group: 'Per-line voice' });
+    for (let i = 1; i <= 24; i++) s.push({ path: `/user/tf/call${String(i).padStart(2, '0')}.wav`, label: `Titan callout ${i} (spoken)`, group: 'Per-line voice' });
+    return s;
+  };
+  SL.isSlot = p => SL.slots().some(s => s.path === p);
+
+  // LittleFS space, same estimate as tools/build_littlefs.py: whole 4 KB blocks per file,
+  // 2 blocks per folder, 2 more. shipped = {blocks, dirs} from sounds.js; clips = [{path, size}].
+  SL.fsEstimate = function (shipped, clips, partBytes) {
+    let blocks = shipped.blocks; const dirs = new Set(shipped.dirs);
+    for (const c of clips) { blocks += Math.ceil(c.size / SL.BLOCK); dirs.add(c.path.slice(0, c.path.lastIndexOf('/'))); }
+    const used = (blocks + 2 * dirs.size + 2) * SL.BLOCK;
+    return { used, total: partBytes, free: partBytes - used, fits: used <= partBytes };
+  };
+
+  // ---- bytes ----
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  SL.crc32 = u8 => { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  SL.b64 = function (u8) {
+    let s = ''; const K = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    for (let i = 0; i < u8.length; i += 3) {
+      const a = u8[i], b = u8[i + 1], c = u8[i + 2], v = (a << 16) | ((b || 0) << 8) | (c || 0);
+      s += K[v >> 18] + K[(v >> 12) & 63] + (i + 1 < u8.length ? K[(v >> 6) & 63] : '=') + (i + 2 < u8.length ? K[v & 63] : '=');
+    }
+    return s;
+  };
+  SL.unb64 = s => { const bin = atob(s), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8; };
+  SL.inflate = async function (b64) {
+    const ds = new DecompressionStream('deflate-raw');
+    const out = new Response(new Blob([SL.unb64(b64)]).stream().pipeThrough(ds));
+    return new Uint8Array(await out.arrayBuffer());
+  };
+  // A plain (stored, uncompressed) ZIP: [{name, data: Uint8Array}] -> Uint8Array.
+  SL.zip = function (files) {
+    const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+    const u16 = v => [v & 255, (v >> 8) & 255], u32 = v => [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255];
+    for (const f of files) {
+      const name = enc.encode(f.name), crc = SL.crc32(f.data), n = f.data.length;
+      const head = [0x50, 0x4b, 3, 4, ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(n), ...u32(n), ...u16(name.length), ...u16(0)];
+      parts.push(new Uint8Array(head), name, f.data);
+      central.push(new Uint8Array([0x50, 0x4b, 1, 2, ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(n), ...u32(n),
+        ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), name);
+      off += head.length + name.length + n;
+    }
+    const cdSize = central.reduce((a, c) => a + c.length, 0);
+    const end = new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(off), 0, 0]);
+    const all = [...parts, ...central, end], out = new Uint8Array(all.reduce((a, c) => a + c.length, 0)); let p = 0;
+    for (const c of all) { out.set(c, p); p += c.length; }
+    return out;
+  };
+
+  // ---- upload over the link (FILE PUT / DATA / END, linkfile.cpp) ----
+  // client.ok(cmd) sends one command; chunkMax = bytes per BLE write (20 or more).
+  SL.dataBytes = function (chunkMax, watchChunk) {
+    const maxMsg = Math.min(2200 - 1, 31 * (chunkMax - 1));     // LINK_MSG_MAX; 32 queued writes on the watch
+    return Math.max(48, Math.min(watchChunk || 1536, Math.floor((maxMsg - 24) / 4) * 3));
+  };
+  SL.upload = async function (client, path, u8, chunkMax, onProgress) {
+    const crc = SL.crc32(u8).toString(16).padStart(8, '0');
+    const r = await client.ok(`FILE PUT ${path} ${u8.length} ${crc}`);
+    const per = SL.dataBytes(chunkMax, parseInt(r.slice(3), 10) || 1536);
+    try {
+      for (let off = 0; off < u8.length; off += per) {
+        await client.ok(`FILE DATA ${off} ${SL.b64(u8.subarray(off, off + per))}`);
+        if (onProgress) onProgress(Math.min(u8.length, off + per), u8.length);
+      }
+      return await client.ok('FILE END');
+    } catch (e) { client.send('FILE ABORT').catch(() => {}); throw e; }
+  };
+
+  root.SoundLab = SL;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script id="watch-ui">
+(function () {
+  'use strict';
+  const P = window.WatchProto;
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  const qs = new URLSearchParams(location.search);
+  const st = { client: null, s: null, lines: { bless: [], callout: [], litany: [] }, list: 'bless', edit: -1, draft: null,
+    demo: false, dev: null, fetchedAt: 0, logLines: [], mock: null };
+  window.__watch = st;                 // for tests/test_webapp_ui.mjs
+  const PAGE_VERSION = 'v8';             // keep in step with VERSION in sw.js (tests check it)
+  const store = { get: (k, d) => { try { const v = localStorage.getItem('watchmk1.' + k); return v === null ? d : v; } catch (e) { return d; } },
+    set: (k, v) => { try { localStorage.setItem('watchmk1.' + k, v); } catch (e) { /* private mode */ } } };
+
+  // ------------------------------------------------------------ icons + art (original drawings)
+  const I = {
+    connect: '<path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1.2 1.2M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1.2-1.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    time: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    faces: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/>',
+    alarms: '<path d="M6 17h12l-1.5-2V11a4.5 4.5 0 0 0-9 0v4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 20h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    sounds: '<path d="M4 10h4l5-4v12l-5-4H4z" fill="currentColor"/><path d="M16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    display: '<circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    text: '<path d="M4 6h16M4 11h16M4 16h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    welcome: '<rect x="3" y="5" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 21h8M12 17v4M8 10l2.2 2.4L16 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    colors: '<circle cx="8" cy="9" r="4" fill="currentColor" opacity=".9"/><circle cx="16" cy="9" r="4" fill="currentColor" opacity=".6"/><circle cx="12" cy="16" r="4" fill="currentColor" opacity=".35"/>',
+    status: '<rect x="3" y="7" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="5" y="9" width="9" height="6" fill="currentColor"/><path d="M21 10v4" stroke="currentColor" stroke-width="2"/>',
+    grip: '<path d="M8 6h.01M16 6h.01M8 12h.01M16 12h.01M8 18h.01M16 18h.01" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>',
+    del: '<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+  };
+  const svg = (p, vb) => `<svg viewBox="${vb || '0 0 24 24'}" aria-hidden="true">${p}</svg>`;
+  const SECTIONS = [['connect', 'Connect'], ['time', 'Time'], ['faces', 'Faces'], ['alarms', 'Alarms'], ['sounds', 'Sounds'],
+    ['display', 'Display'], ['text', 'Text'], ['welcome', 'Welcome'], ['colors', 'Colours'], ['status', 'Status']];
+
+  function faceArt(id) {
+    const ticks = (r0, r1, col, n, w) => Array.from({ length: n }, (_, i) => {
+      const a = i * 2 * Math.PI / n, s = Math.sin(a), c = Math.cos(a);
+      return `<line x1="${50 + r0 * s}" y1="${50 - r0 * c}" x2="${50 + r1 * s}" y2="${50 - r1 * c}" stroke="${col}" stroke-width="${w}"/>`;
+    }).join('');
+    if (id === 'cogitator') {
+      const teeth = Array.from({ length: 12 }, (_, i) => `<rect x="47" y="13" width="6" height="7" fill="#68461a" transform="rotate(${i * 30} 50 50)"/>`).join('');
+      return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#160505" stroke="#c9963e" stroke-width="2"/>${teeth}<circle cx="50" cy="50" r="31" fill="#241010" stroke="#68461a" stroke-width="2"/>${ticks(40, 44, '#7a5420', 24, 1.5)}<text x="50" y="57" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="20" fill="#e2cda0">10:42</text><text x="50" y="72" text-anchor="middle" font-family="monospace" font-size="6" fill="#b21612">+ VIGIL +</text></svg>`;
+    }
+    if (id === 'pilothud') {
+      return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#02080e" stroke="#0d4a5e" stroke-width="2"/><path d="M14 50a36 36 0 0 1 72 0" fill="none" stroke="#28dcff" stroke-width="3"/><path d="M78 30a36 36 0 0 1 8 20" fill="none" stroke="#ff8214" stroke-width="4"/>${ticks(42, 46, '#0d4a5e', 36, 1)}<text x="50" y="62" text-anchor="middle" font-family="Arial Narrow,sans-serif" font-style="italic" font-weight="700" font-size="24" fill="#e1f5ff">10:42</text><rect x="30" y="70" width="40" height="7" fill="#041620" stroke="#28dcff" stroke-width=".8"/><text x="50" y="75.5" text-anchor="middle" font-family="sans-serif" font-size="5" fill="#28dcff">LINK OK</text></svg>`;
+    }
+    if (id === 'digital') {
+      return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#000" stroke="#333" stroke-width="2"/><text x="50" y="58" text-anchor="middle" font-family="ui-monospace,monospace" font-weight="700" font-size="22" fill="#5cf08a">10:42</text><text x="50" y="72" text-anchor="middle" font-family="monospace" font-size="7" fill="#2a7a44">SUN 15</text></svg>`;
+    }
+    return `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#000" stroke="#46484c" stroke-width="1.5"/>${ticks(43, 46, '#f0f0ec', 12, 1.6)}${ticks(44, 46, '#46484c', 60, .6)}<circle cx="${50 + 40 * Math.sin(2.2)}" cy="${50 - 40 * Math.cos(2.2)}" r="2" fill="#ff4632"/><text x="50" y="56" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="600" font-size="20" fill="#f0f0ec">10:42</text><text x="50" y="68" text-anchor="middle" font-family="system-ui,sans-serif" font-size="6" fill="#a6a8ad">SUN 15 NOV</text></svg>`;
+  }
+
+  // ------------------------------------------------------------ small UI helpers
+  let toastT = 0;
+  function toast(msg, err) {
+    const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+    clearTimeout(toastT); toastT = setTimeout(() => { t.className = 'toast'; }, err ? 4000 : 1800);
+  }
+  function log(s) {
+    st.logLines.push(new Date().toTimeString().slice(0, 8) + ' ' + s);
+    if (st.logLines.length > 60) st.logLines.shift();
+    const el = $('#log'); if (el) { el.textContent = st.logLines.join('\n'); el.scrollTop = 1e9; }
+  }
+  const linked = () => !!(st.client && st.s);
+  async function run(cmd, okMsg) {
+    if (!st.client) { toast('Connect the watch first', true); throw new Error('offline'); }
+    try { const r = await st.client.ok(cmd); if (okMsg) toast(okMsg); return r; }
+    catch (e) { toast('Watch: ' + e.message, true); throw e; }
+  }
+  const pad = n => String(n).padStart(2, '0');
+
+  // ------------------------------------------------------------ theme + navigation
+  function setTheme(t, save) {
+    if (!['std', 'k40', 'tf'].includes(t)) t = 'std';
+    document.documentElement.dataset.theme = t;
+    $$('.themes button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.th === t)));
+    const meta = document.querySelector('meta[name=theme-color]');
+    if (meta) meta.content = { std: '#000000', k40: '#160505', tf: '#02080e' }[t];
+    $('#title').textContent = { std: 'Watch MK1', k40: 'Cogitator', tf: 'Datalink' }[t];
+    if (save) store.set('theme', t);
+    renderHero();
+  }
+  function renderHero() {
+    const t = document.documentElement.dataset.theme;
+    $('#hero').innerHTML = faceArt(t === 'k40' ? 'cogitator' : t === 'tf' ? 'pilothud' : '24h');
+  }
+  function show(hash) {
+    const [id, sub] = (hash || '').replace('#', '').split('/');
+    const sec = SECTIONS.some(s => s[0] === id) ? id : 'connect';
+    $$('main section').forEach(s => s.classList.toggle('show', s.id === sec));
+    $$('nav a').forEach(a => a.setAttribute('aria-current', a.dataset.sec === sec ? 'page' : 'false'));
+    const a = $(`nav a[data-sec="${sec}"]`); if (a && a.scrollIntoView) a.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (sec === 'alarms' && sub && sub.startsWith('edit')) openAlarm(+sub.slice(4));
+    if (sec === 'text' && sub && P.LIMITS[sub]) { st.list = sub; renderText(); }
+    if (sec === 'text') $$('#lines textarea').forEach(grow);
+    if (sec === 'sounds' && window.__labRefresh) window.__labRefresh(false);   // sizes are 0 while a section is hidden
+    window.scrollTo(0, 0);
+  }
+  $('#nav').innerHTML = SECTIONS.map(([id, name]) => `<a href="#${id}" data-sec="${id}">${svg(I[id])}<span>${name}</span></a>`).join('');
+  window.addEventListener('hashchange', () => show(location.hash));
+  $$('.themes button').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.th, true)));
+
+  // ------------------------------------------------------------ transports
+  class AutoSkip extends Error { constructor(m) { super(m); this.name = 'AutoSkip'; } }   // the quiet page-open reconnect gave up: not an error to show
+  class BleTransport {
+    constructor() { this.chunkMax = 20; this.onChunk = null; this.busy = Promise.resolve(); }
+    // The watch used last time: Chrome (with its "new permissions backend" and experimental-features flags on) and Bluefy
+    // list the devices this site may use, so it can be reconnected without the picker. Anything missing, or the watch not
+    // advertising within a few seconds, falls back to the normal picker.
+    async remembered() {
+      const bt = navigator.bluetooth;
+      if (!bt || !bt.getDevices) return null;
+      let list; try { list = await bt.getDevices(); } catch (e) { return null; }
+      let last = null; try { last = JSON.parse(store.get('lastDev', 'null')); } catch (e) { /* none */ }
+      list = (list || []).filter(d => d && ((last && d.id === last.id) || /^WATCH/i.test(d.name || '')));   // the scanner page shares this site's permissions
+      return list.find(d => last && d.id === last.id) || (list.length === 1 ? list[0] : null);
+    }
+    async awake(dev, ms) {      // true when the watch was seen advertising (or this browser cannot tell), false after ms
+      if (!dev.watchAdvertisements) return true;
+      const ac = new AbortController();
+      let h = null;
+      try {
+        await dev.watchAdvertisements({ signal: ac.signal });
+        return await new Promise(res => { const t = setTimeout(() => res(false), ms); h = () => { clearTimeout(t); res(true); }; dev.addEventListener('advertisementreceived', h); });
+      } catch (e) { return true; }
+      finally { if (h) dev.removeEventListener('advertisementreceived', h); try { ac.abort(); } catch (e) { /* done */ } }
+    }
+    async open(forcePick, auto) {
+      let dev = null;
+      if (auto) {     // page-open reconnect: the remembered watch only, and only when it can be seen advertising. Never the picker (that needs a tap).
+        const r = await this.remembered();
+        if (!r || !r.watchAdvertisements) throw new AutoSkip('no remembered watch to reconnect to');
+        if (!(await this.awake(r, 3000))) throw new AutoSkip('the remembered watch is not advertising');
+        dev = r; this.viaRemembered = true;
+      } else if (!forcePick) {
+        const r = await this.remembered();
+        if (r) { if (await this.awake(r, 3000)) { dev = r; this.viaRemembered = true; } else log('the remembered watch is not advertising: opening the picker'); }
+      }
+      if (!dev) dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [P.SVC] }, { namePrefix: 'WATCH' }], optionalServices: [P.SVC] });
+      this.dev = dev;
+      this.gone = () => { dev.removeEventListener('gattserverdisconnected', this.gone); onDisconnected(); };   // the same device object can be reused, so never stack listeners
+      dev.addEventListener('gattserverdisconnected', this.gone);
+      let gatt;
+      if (this.viaRemembered) {   // a remembered watch that is not really there would hang for ~30 s: give up after 12 s
+        let to; gatt = await Promise.race([dev.gatt.connect(), new Promise((_, rej) => { to = setTimeout(() => { try { dev.gatt.disconnect(); } catch (e) { /* none */ } rej(new Error('the watch did not answer')); }, 12000); })]);
+        clearTimeout(to);
+      } else gatt = await dev.gatt.connect();
+      const svc = await gatt.getPrimaryService(P.SVC);
+      this.rx = await svc.getCharacteristic(P.RX);
+      this.tx = await svc.getCharacteristic(P.TX);
+      this.tx.addEventListener('characteristicvaluechanged', e => {
+        const v = e.target.value; this.onChunk && this.onChunk(new Uint8Array(v.buffer, v.byteOffset, v.byteLength).slice());
+      });
+      await this.tx.startNotifications();
+      store.set('lastDev', JSON.stringify({ id: dev.id || '', name: dev.name || '' }));
+      return this.dev;
+    }
+    // Sound uploads: try 180-byte writes without response (needs an MTU of 183+, which
+    // Android/desktop Chrome usually get). A probe message checks it; if it fails we stay at 20.
+    async fast(client) {
+      if (this.fastOk === false) return;
+      const old = client.timeoutMs; this.chunkMax = 180; this.noResp = !!this.rx.writeValueWithoutResponse; client.timeoutMs = 3000;
+      try { this.fastOk = (await client.send('PING ' + 'x'.repeat(160))).startsWith('OK'); } catch (e) { this.fastOk = false; }
+      client.timeoutMs = old;
+      if (!this.fastOk) { this.slow(); client.rx = new P.Reassembler(); }
+    }
+    slow() { this.chunkMax = 20; this.noResp = false; }
+    write(chunks) {           // 20-byte writes always fit, whatever MTU the phone negotiated
+      const job = async () => { for (const c of chunks) await (this.noResp ? this.rx.writeValueWithoutResponse(c) : this.rx.writeValueWithResponse ? this.rx.writeValueWithResponse(c) : this.rx.writeValue(c)); };
+      const p = this.busy.then(job, job); this.busy = p.catch(() => {}); return p;
+    }
+    close() { try { this.dev && this.dev.gatt.connected && this.dev.gatt.disconnect(); } catch (e) { /* gone */ } }
+  }
+  const canRemember = () => !!(navigator.bluetooth && navigator.bluetooth.getDevices);
+
+  function setPill() {
+    const p = $('#pill');
+    if (st.demo && st.s) { p.textContent = 'demo'; p.className = 'pill demo'; }
+    else if (st.s) { p.textContent = 'linked'; p.className = 'pill on'; }
+    else if (st.client) { p.textContent = 'pairing'; p.className = 'pill'; }
+    else { p.textContent = 'offline'; p.className = 'pill'; }
+    $('#connsub').textContent = st.s ? (st.demo ? 'demo watch (no hardware)' : (st.dev && st.dev.name || 'WATCH MK1')) : 'not connected';
+    $('#connected').hidden = !st.client;
+    $('#btnConnect').hidden = $('#btnDemo').hidden = !!st.client;
+    $('#btnPick').hidden = !!st.client || !canRemember() || !store.get('lastDev', '');
+    $$('[data-need]').forEach(el => { el.disabled = !st.s; });
+    if (window.__labRefresh) window.__labRefresh(false);
+    document.querySelectorAll('main .card').forEach(c => { if (!c.closest('#connect') && !c.closest('#colors')) c.classList.toggle('muted', !st.s && !c.classList.contains('lab')); });
+  }
+
+  async function startSession(transport, isDemo, auto) {
+    st.client = new P.Client(transport);
+    st.client.onLog = log;
+    st.client.onEvent = () => refresh(false);
+    st.demo = isDemo; st.t = transport;
+    setPill();
+    const hello = P.parseJson(await st.client.send(P.cmd.hello()));
+    log('watch firmware ' + hello.fw);
+    if (!hello.auth) {
+      // This watch's token; failing that the last token any watch gave this phone (the browser may give the same watch a new id).
+      const own = store.get(tokenKey(), ''), tok = own || (isDemo ? '' : store.get('token.last', ''));
+      let ok = false;
+      if (tok) {
+        const ar = await st.client.send(P.cmd.auth(tok));
+        ok = ar === 'OK';
+        if (ok && !own && !isDemo) store.set(tokenKey(), tok);
+        else if (!ok && ar.startsWith('ERR auth')) { if (own) store.set(tokenKey(), ''); if (store.get('token.last', '') === tok) store.set('token.last', ''); }      // the watch forgot this phone: do not try a dead token every time
+      }
+      if (!ok && isDemo) { const pin = st.mock.startPairing(); if (pin) ok = await doPin(String(pin)); }
+      if (!ok && auto) throw new AutoSkip('this phone is not paired (or the watch forgot it): waiting for a tap');   // never open the PIN box unasked
+      if (!ok) { $('#pinbox').hidden = false; $('#pin').focus(); setPill(); return; }
+    }
+    await afterAuth();
+  }
+  const tokenKey = () => 'token.' + (st.demo ? 'demo' : (st.dev && st.dev.id) || 'watch');
+  async function doPin(pin) {
+    pin = String(pin).trim();
+    if (!st.client) { toast('Connect the watch first', true); return false; }
+    // A wrong PIN counts towards the watch's 5-try lock, so do not spend one on a half-typed PIN.
+    if (!/^\d{6}$/.test(pin)) { toast('The PIN is 6 digits: type all of them', true); return false; }
+    let r;
+    try { r = await st.client.send(P.cmd.auth(pin)); }
+    catch (e) { toast('Could not send the PIN: ' + e.message, true); return false; }
+    if (r.startsWith('OK TOKEN ')) {
+      store.set(tokenKey(), r.slice(9).trim());
+      if (!st.demo) store.set('token.last', r.slice(9).trim());
+      $('#pinbox').hidden = true; toast('Paired'); return true;
+    }
+    const lk = /^ERR locked (\d+)/.exec(r);       // "ERR locked <secs>": the watch stopped pairing after 15 wrong PINs
+    const mins = lk ? Math.max(1, Math.ceil(+lk[1] / 60)) : 0;
+    toast(lk ? 'Too many wrong PINs: pairing is locked for ' + (mins >= 5 ? '5 minutes' : mins + ' more minute' + (mins > 1 ? 's' : '')) + '. Phones that are already paired still work. Then open Menu > Phone > Pair on the watch.'
+      : r.includes('locked') ? 'Too many wrong PINs: reconnect and try again'
+      : r.includes('first') ? 'Pairing is not open: on the watch open Menu > Phone > Pair, then try again'
+      : r === 'ERR auth' ? 'Wrong PIN: check the watch screen'
+      : 'Pairing failed: ' + r.replace(/^ERR\s*/, ''), true);
+    return false;
+  }
+  async function afterAuth() {
+    await refresh(true);
+    if (store.get('autoSync', '1') === '1') { try { await syncTime(true); } catch (e) { /* shown */ } }
+    if (!store.get('theme', '')) {     // first visit: dress the page like the watch face
+      const f = st.s.face; setTheme(f === 'cogitator' ? 'k40' : f === 'pilothud' ? 'tf' : 'std', false);
+    }
+  }
+  async function refresh(all) {
+    if (!st.client) return;
+    try {
+      st.s = P.parseJson(await st.client.send(P.cmd.get()));
+      st.fetchedAt = Date.now();
+      for (const l of ['bless', 'callout', 'litany']) st.lines[l] = P.parseList(await st.client.send(P.cmd.textList(l)));
+      renderAll();
+    } catch (e) { toast('Could not read the watch: ' + e.message, true); }
+    setPill();
+  }
+  function onDisconnected() {
+    log('disconnected');
+    st.client = null; st.s = null; st.t = null; $('#pinbox').hidden = true;
+    setPill(); toast('Watch disconnected', true);
+  }
+
+  async function connect(pick, auto) {
+    const t = new BleTransport();
+    try { st.dev = await t.open(pick, auto); log('connected to ' + (st.dev.name || 'watch') + (t.viaRemembered ? ' (remembered)' : '')); await startSession(t, false, auto); }
+    catch (e) {
+      if (auto) {      // quiet: no toast, no PIN box; leave the Connect button waiting for a tap
+        log('auto-reconnect skipped: ' + (e && e.message));
+        if (t.dev && t.gone) t.dev.removeEventListener('gattserverdisconnected', t.gone);
+        if (!st.s) { t.close(); st.client = null; st.t = null; $('#pinbox').hidden = true; setPill(); }
+        return;
+      }
+      if (t.viaRemembered && !st.s) { toast('Could not reach the remembered watch: wake it (Menu > Phone > Pair), then tap Connect again, or tap Choose another watch.', true); }
+      else if (e && e.name !== 'NotFoundError') toast('Bluetooth: ' + e.message, true);
+      log('connect failed: ' + (e && e.message)); if (!st.s) { t.close(); st.client = null; setPill(); }
+    }
+  }
+  // On page open: reconnect to the watch used last time, once, without a tap. It needs getDevices + watchAdvertisements (Chrome with the
+  // flags on, or Bluefy), a remembered watch that is advertising, and a stored pairing token. It never opens the picker, never asks
+  // for a PIN, never retries, and stays silent when anything is missing: then the Connect button just waits for a tap.
+  let autoTried = false;
+  async function autoReconnect() {
+    if (autoTried) return; autoTried = true;
+    if (st.client || st.demo || !canRemember() || document.visibilityState === 'hidden') return;
+    let last = null; try { last = JSON.parse(store.get('lastDev', 'null')); } catch (e) { /* none */ }
+    if (!last || !last.id || !(store.get('token.' + last.id, '') || store.get('token.last', ''))) return;
+    const bc = $('#btnConnect'), bp = $('#btnPick'), bd = $('#btnDemo'), label = bc.textContent;
+    bc.disabled = bp.disabled = bd.disabled = true; bc.textContent = 'Reconnecting...';     // (the demo too: it would swap the session under the attempt)
+    let done = false;
+    const release = () => { if (done) return; done = true; bc.textContent = label; bc.disabled = bp.disabled = bd.disabled = false; };
+    const cap = setTimeout(() => { if (!st.s) { log('auto-reconnect timed out'); release(); } }, 20000);     // never leave the buttons disabled
+    try { await connect(false, true); } catch (e) { log('auto-reconnect failed: ' + (e && e.message)); }
+    finally { clearTimeout(cap); release(); }
+  }
+  $('#btnConnect').addEventListener('click', () => connect(false));
+  $('#btnPick').addEventListener('click', () => connect(true));
+  function demoDefaults() { return JSON.parse(document.getElementById('default-lines').textContent); }
+  async function startDemo() {
+    const m = st.mock = new P.MockWatch(demoDefaults());
+    m.s.alarms[0] = { on: 1, h: 6, m: 30, days: 62, snd: 20 };
+    m.s.alarms[1] = { on: 0, h: 9, m: 15, days: 65, snd: 255 };
+    m.s.alarms[2] = { on: 1, h: 13, m: 0, days: 0, snd: 24 };
+    const th = document.documentElement.dataset.theme;
+    m.s.face = th === 'k40' ? 'cogitator' : th === 'tf' ? 'pilothud' : '24h';
+    st.dev = null;
+    window.__demoWatch = m;            // for tests/test_webapp_ui.mjs
+    await startSession(new P.MockTransport(m), true);
+  }
+  $('#btnDemo').addEventListener('click', () => startDemo().catch(e => toast(e.message, true)));
+  $('#btnPin').addEventListener('click', async () => { if (await doPin($('#pin').value)) await afterAuth(); });   // doPin reports its own errors
+  $('#pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnPin').click(); });
+  $('#btnRefresh').addEventListener('click', () => refresh(true));
+  $('#btnDisconnect').addEventListener('click', async () => {
+    try { if (st.client) await st.client.send(P.cmd.bye()); } catch (e) { /* already gone */ }
+    if (st.t && st.t.close) st.t.close();
+    st.client = null; st.s = null; $('#pinbox').hidden = true; setPill();
+  });
+
+  // ------------------------------------------------------------ render
+  function renderAll() {
+    if (!st.s) return;
+    const s = st.s;
+    // settings controls with data-set="group.key"
+    $$('[data-set]').forEach(el => {
+      const [g, k] = el.dataset.set.includes('.') ? el.dataset.set.split('.') : [null, el.dataset.set];
+      const v = g ? s[g][k] : s[k];
+      if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
+    });
+    $('#pack').innerHTML = s.snd.packs.map((p, i) => `<option value="${i}">${esc(p === 'AUTO' ? 'Auto (follow face)' : p)}</option>`).join('');
+    $('#pack').value = String(s.snd.pack);
+    const opt = (list, cur, fmt) => { if (!list.includes(cur)) list = list.concat([cur]); return list.map(v => `<option value="${v}">${fmt(v)}</option>`).join(''); };
+    $('#autodim').innerHTML = opt([0, 3, 5, 10, 20, 30], s.disp.autodim, v => v ? v + ' s' : 'Never'); $('#autodim').value = String(s.disp.autodim);
+    $('#off').innerHTML = opt([5, 10, 15, 30, 60, 0], s.disp.off, v => v ? v + ' s' : 'Never (battery!)'); $('#off').value = String(s.disp.off);
+    labels();
+    // faces
+    $('#faceList').innerHTML = s.faces.map(f => `<button class="face" data-face="${esc(f.id)}" aria-pressed="${f.id === s.face}">${faceArt(f.id)}<b>${esc(f.name)}</b><small>${{ '24h': 'clean 24-hour dial', cogitator: 'cogitator slate', pilothud: 'pilot HUD', digital: 'classic digital' }[f.id] || ''}</small></button>`).join('');
+    $$('.face').forEach(b => b.addEventListener('click', async () => { await run(P.cmd.face(b.dataset.face), 'Face changed'); s.face = b.dataset.face; renderAll(); }));
+    // roles
+    $('#roleBtns').innerHTML = s.snd.roles.map(r => `<button class="ghost small" data-role="${esc(r)}" data-need>${esc(r)}</button>`).join('');
+    $$('[data-role]').forEach(b => b.addEventListener('click', () => run(P.cmd.role(b.dataset.role))));
+    renderAlarms(); renderText(); renderWelcome(); renderStatus(); tick();
+    if (window.__labRefresh) window.__labRefresh(true);
+    $('#url').value = s.url;
+    $('#tzrule').textContent = P.posixTz(P.localZone(), new Date().getFullYear());
+    setPill();
+  }
+  function labels() {
+    if (!st.s) return;
+    $('#volv').textContent = st.s.snd.vol ? st.s.snd.vol + '/5' : 'mute';
+    $('#snoozev').textContent = st.s.snd.snooze + ' min';
+    $('#brightv').textContent = st.s.disp.bright + '/5';
+    $('#dimv').textContent = (st.s.disp.dim + 1) + '/4';
+  }
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // settings inputs
+  $$('[data-set]').forEach(el => el.addEventListener(el.type === 'range' ? 'input' : 'change', () => {
+    if (!st.s) return;
+    const [g, k] = el.dataset.set.includes('.') ? el.dataset.set.split('.') : [null, el.dataset.set];
+    const v = el.type === 'checkbox' ? (el.checked ? 1 : 0) : +el.value;
+    if (g) st.s[g][k] = v; else st.s[k] = v;
+    labels();
+    if (el.type === 'range') return;    // sent on release ('change') below
+    send(k, v, el);
+  }));
+  $$('input[type=range][data-set]').forEach(el => el.addEventListener('change', () => {
+    const k = el.dataset.set.split('.').pop(); send(k, +el.value, el);
+    if (k === 'vol' && +el.value > 0) run(P.cmd.role('confirm')).catch(() => {});
+  }));
+  async function send(k, v) { try { await run(P.cmd.set(k, v)); } catch (e) { refresh(false); } }
+
+  // ------------------------------------------------------------ alarms
+  const soundName = id => { const x = st.s && st.s.snd.sounds.find(s => s.id === id); return x ? x.name : '#' + id; };
+  function renderAlarms() {
+    const A = st.s.alarms, used = A.map((a, i) => [a, i]).filter(([a, i]) => !P.alarmFree(a) || i === st.edit);
+    $('#alarmCount').textContent = `${used.length} of ${A.length}`;
+    $('#alarmList').innerHTML = used.length ? used.map(([a, i]) => `<div class="alarm${a.on ? '' : ' off'}" data-i="${i}">
+      <div class="t" data-edit="${i}">${fmtTime(a.h, a.m)}</div>
+      <div class="d" data-edit="${i}"><b>${P.daysText(a.days)}</b><div>${esc(soundName(a.snd))}</div></div>
+      <span class="switch"><input type="checkbox" aria-label="Alarm on" data-tog="${i}" ${a.on ? 'checked' : ''}><span></span></span></div>`).join('')
+      : '<p class="sub">No alarms yet.</p>';
+    $$('[data-edit]').forEach(el => el.addEventListener('click', () => openAlarm(+el.dataset.edit)));
+    $$('[data-tog]').forEach(el => el.addEventListener('change', async () => {
+      const i = +el.dataset.tog, a = Object.assign({}, A[i], { on: el.checked ? 1 : 0 });
+      try { await run(P.cmd.alarm(i, a), el.checked ? 'Alarm on' : 'Alarm off'); A[i] = a; } catch (e) { el.checked = !el.checked; }
+      renderAlarms();
+    }));
+    $('#btnAddAlarm').disabled = !st.s || !A.some(P.alarmFree) || st.edit >= 0;
+    renderEditor();
+  }
+  const fmtTime = (h, m) => (st.s && st.s.disp.h24) ? `${pad(h)}:${pad(m)}` : `${(h % 12) || 12}:${pad(m)}<small style="font-size:.5em"> ${h < 12 ? 'AM' : 'PM'}</small>`;
+  function openAlarm(i) {
+    if (!st.s || !st.s.alarms[i]) return;
+    st.edit = i; st.draft = Object.assign({}, st.s.alarms[i]);
+    if (P.alarmFree(st.draft)) st.draft.on = 1;
+    renderAlarms();
+    const ed = $('#alarmEditor'); if (ed.scrollIntoView) ed.scrollIntoView({ block: 'nearest' });
+  }
+  function renderEditor() {
+    const ed = $('#alarmEditor');
+    if (st.edit < 0 || !st.draft) { ed.innerHTML = ''; return; }
+    const d = st.draft, L = ['S', 'M', 'T', 'W', 'T', 'F', 'S'], N = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    ed.innerHTML = `<div class="editor"><h3 style="margin-bottom:8px">Alarm ${st.edit + 1}</h3>
+      <input type="time" id="aTime" value="${pad(d.h)}:${pad(d.m)}" aria-label="Alarm time">
+      <div class="days">${L.map((l, k) => `<button data-day="${k}" aria-label="${N[k]}" aria-pressed="${!!(d.days & (1 << k))}">${l}</button>`).join('')}</div>
+      <div class="presets"><button class="ghost small" data-pre="62">Weekdays</button><button class="ghost small" data-pre="65">Weekends</button><button class="ghost small" data-pre="127">Daily</button><button class="ghost small" data-pre="0">Once</button></div>
+      <p class="hint" id="aDays">${P.daysText(d.days)}</p>
+      <div class="row"><label for="aSnd">Sound</label><select id="aSnd">${st.s.snd.sounds.map(s => `<option value="${s.id}">${esc(s.name === 'THEME' ? 'Theme (face pack)' : s.name)}</option>`).join('')}</select><button class="ghost small" id="aTest">Test</button></div>
+      <div class="row"><label for="aOn">Enabled</label><span class="switch"><input type="checkbox" id="aOn" ${d.on ? 'checked' : ''}><span></span></span></div>
+      <div class="btns"><button id="aSave">Save</button><button class="ghost" id="aCancel">Cancel</button><button class="warn" id="aDel">Delete</button></div></div>`;
+    $('#aSnd').value = String(d.snd);
+    $('#aTime').addEventListener('change', e => { const [h, m] = e.target.value.split(':'); d.h = +h || 0; d.m = +m || 0; });
+    $$('[data-day]').forEach(b => b.addEventListener('click', () => { d.days ^= 1 << +b.dataset.day; b.setAttribute('aria-pressed', String(!!(d.days & (1 << +b.dataset.day)))); $('#aDays').textContent = P.daysText(d.days); }));
+    $$('[data-pre]').forEach(b => b.addEventListener('click', () => { d.days = +b.dataset.pre; renderEditor(); }));
+    $('#aSnd').addEventListener('change', e => { d.snd = +e.target.value; });
+    $('#aOn').addEventListener('change', e => { d.on = e.target.checked ? 1 : 0; });
+    $('#aTest').addEventListener('click', () => run(d.snd === 255 ? P.cmd.role('alarm') : P.cmd.play(d.snd)).catch(() => {}));
+    $('#aSave').addEventListener('click', async () => {
+      const t = $('#aTime').value.split(':'); d.h = +t[0] || 0; d.m = +t[1] || 0;
+      await run(P.cmd.alarm(st.edit, d), 'Alarm saved'); st.s.alarms[st.edit] = Object.assign({}, d); closeAlarm();
+    });
+    $('#aCancel').addEventListener('click', closeAlarm);
+    $('#aDel').addEventListener('click', async () => { await run(P.cmd.clearAlarm(st.edit), 'Alarm deleted'); st.s.alarms[st.edit] = Object.assign({}, P.DEFAULT_ALARM); closeAlarm(); });
+  }
+  function closeAlarm() { st.edit = -1; st.draft = null; run(P.cmd.stop()).catch(() => {}); renderAlarms(); }
+  $('#btnAddAlarm').addEventListener('click', () => { const i = st.s.alarms.findIndex(P.alarmFree); if (i >= 0) openAlarm(i); });
+
+  // ------------------------------------------------------------ text lines
+  const HINTS = {
+    bless: 'Servo-skull blessings on the 40K compass. Up to 40 characters; put | where the bubble should break the line.',
+    callout: 'Titan callouts typed on the Titanfall compass. Up to 50 characters; capitals look best.',
+    litany: 'Phrases scrolling along the 40K face. Up to 48 characters each.',
+  };
+  function clampInput(el, max) {
+    const a = [...el.value.replace(/[\r\n]/g, ' ')];
+    if (a.length > max) { const pos = el.selectionStart; el.value = a.slice(0, max).join(''); try { el.setSelectionRange(pos, pos); } catch (e) { /* type */ } }
+    return P.chars(el.value);
+  }
+  function renderText() {
+    const l = st.list, max = P.LIMITS[l], L = st.lines[l] || [];
+    $('#textTabs').innerHTML = Object.keys(P.LIMITS).map(k => `<button role="tab" data-list="${k}" aria-selected="${k === l}">${P.LIST_NAMES[k]}</button>`).join('');
+    $$('[data-list]').forEach(b => b.addEventListener('click', () => { st.list = b.dataset.list; renderText(); }));
+    $('#textHint').textContent = HINTS[l];
+    const info = st.s && st.s.text[l];
+    $('#textCount').textContent = `${L.length}/${P.MAX_LINES}` + (info && info.custom ? ' · edited' : ' · defaults');
+    $('#lines').innerHTML = L.map((s, i) => `<li data-i="${i}"><span class="handle" tabindex="0" role="button" aria-label="Move line ${i + 1} (arrow keys)">${svg(I.grip)}</span><span class="num">${i + 1}</span>
+      <textarea rows="1" data-line="${i}" aria-label="Line ${i + 1}" ${st.s ? '' : 'disabled'}>${esc(s)}</textarea><span class="cnt">${P.chars(s)}/${max}</span>
+      <button class="iconbtn" data-del="${i}" aria-label="Delete line ${i + 1}" ${L.length <= 1 || !st.s ? 'disabled' : ''}>${svg(I.del)}</button></li>`).join('');
+    $$('[data-line]').forEach(inp => {
+      grow(inp);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });   // one line per entry
+      inp.addEventListener('input', () => { const n = clampInput(inp, max); inp.nextElementSibling.textContent = `${n}/${max}`; grow(inp); });
+      inp.addEventListener('change', async () => {
+        const i = +inp.dataset.line, v = inp.value.trim();
+        if (!v) { inp.value = L[i]; return; }
+        try { await run(P.cmd.textSet(l, i, v), 'Saved'); L[i] = P.cleanLine(l, v); markCustom(l); } catch (e) { inp.value = L[i]; }
+      });
+    });
+    $$('[data-del]').forEach(b => b.addEventListener('click', async () => {
+      const i = +b.dataset.del; await run(P.cmd.textDel(l, i), 'Deleted'); L.splice(i, 1); markCustom(l); renderText();
+    }));
+    $$('#lines .handle').forEach(h => {
+      h.addEventListener('pointerdown', dragStart);
+      h.addEventListener('keydown', e => {
+        const i = +h.parentElement.dataset.i, j = e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowDown' ? i + 1 : -1;
+        if (j < 0 || j >= L.length) return; e.preventDefault(); moveLine(i, j, true);
+      });
+    });
+    $('#newCnt').textContent = `${P.chars($('#newLine').value)}/${max}`;
+    $('#btnAddLine').disabled = !st.s || L.length >= P.MAX_LINES;
+  }
+  function grow(el) { if (!el.offsetParent) return; el.style.height = 'auto'; el.style.height = el.scrollHeight + 2 + 'px'; }
+  window.addEventListener('resize', () => $$('#lines textarea').forEach(grow));
+  function markCustom(l) { if (st.s) st.s.text[l].custom = 1; }
+  async function moveLine(i, j, refocus) {
+    const l = st.list, L = st.lines[l];
+    await run(P.cmd.textMove(l, i, j));
+    const [x] = L.splice(i, 1); L.splice(j, 0, x); markCustom(l); renderText();
+    if (refocus) { const h = $$('#lines .handle')[j]; h && h.focus(); }
+  }
+  let drag = null;
+  function dragStart(e) {
+    const li = e.currentTarget.parentElement; e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag = { li, from: +li.dataset.i, y0: e.clientY, to: +li.dataset.i, h: e.currentTarget };
+    li.classList.add('drag');
+    e.currentTarget.addEventListener('pointermove', dragMove);
+    e.currentTarget.addEventListener('pointerup', dragEnd, { once: true });
+    e.currentTarget.addEventListener('pointercancel', dragEnd, { once: true });
+  }
+  function dragMove(e) {
+    if (!drag) return;
+    drag.li.style.transform = `translateY(${e.clientY - drag.y0}px)`;
+    const items = $$('#lines li'), others = items.filter(it => it !== drag.li);
+    let to = others.length;                       // final position = MOVE semantics (remove, then insert)
+    for (let k = 0; k < others.length; k++) { const r = others[k].getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { to = k; break; } }
+    drag.to = to;
+    items.forEach(it => it.classList.remove('drop'));
+    if (to !== drag.from && others[to]) others[to].classList.add('drop');
+  }
+  function dragEnd() {
+    if (!drag) return;
+    const d = drag; drag = null;
+    d.h.removeEventListener('pointermove', dragMove);
+    d.li.style.transform = ''; d.li.classList.remove('drag');
+    $$('#lines li').forEach(it => it.classList.remove('drop'));
+    if (d.to !== d.from) moveLine(d.from, d.to).catch(() => renderText());
+  }
+  $('#newLine').addEventListener('input', () => { const max = P.LIMITS[st.list]; $('#newCnt').textContent = `${clampInput($('#newLine'), max)}/${max}`; });
+  $('#newLine').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnAddLine').click(); });
+  $('#btnAddLine').addEventListener('click', async () => {
+    const l = st.list, v = $('#newLine').value.trim(); if (!v) return;
+    await run(P.cmd.textAdd(l, v), 'Added'); st.lines[l].push(P.cleanLine(l, v)); markCustom(l); $('#newLine').value = ''; renderText();
+  });
+  $('#btnResetText').addEventListener('click', async () => {
+    const l = st.list;
+    if (!confirm(`Put the ${P.LIST_NAMES[l].toLowerCase()} back to the built-in defaults?`)) return;
+    await run(P.cmd.textReset(l), 'Back to defaults');
+    st.lines[l] = P.parseList(await st.client.send(P.cmd.textList(l))); if (st.s) st.s.text[l].custom = 0; renderText();
+  });
+
+  // ------------------------------------------------------------ boot welcome
+  const welDirty = {};
+  function welRowHtml(t, w, max) {
+    return `<div class="welrow" data-wel="${t}">
+      <label for="wel-${t}">${esc(P.WELCOME.names[t])}</label>
+      <textarea id="wel-${t}" rows="2" aria-label="Welcome message, ${esc(P.WELCOME.names[t])}">${esc(w[t].text)}</textarea>
+      <div class="welmeta"><span class="cnt" id="welcnt-${t}">${P.chars(w[t].text)}/${max}</span><span>${w[t].custom ? 'edited' : 'default'}</span></div>
+      <div class="btns"><button data-wsave="${t}" disabled>Save</button><button class="ghost" data-wshow="${t}">Show on watch</button><button class="warn" data-wreset="${t}"${w[t].custom ? '' : ' disabled'}>Reset</button></div></div>`;
+  }
+  function wireWelRow(t, max) {
+    const ta = $('#wel-' + t), save = $(`[data-wsave="${t}"]`);
+    welDirty[t] = false;
+    ta.addEventListener('input', () => {
+      const n = clampInput(ta, max); $('#welcnt-' + t).textContent = `${n}/${max}`;
+      welDirty[t] = P.cleanWelcome(ta.value) !== st.s.welcome[t].text; save.disabled = !welDirty[t] || !P.cleanWelcome(ta.value);   // st.s is replaced on every refresh: never keep an old copy
+    });
+    ta.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!save.disabled) save.click(); } });   // one line of text
+  }
+  // The watch reports a settings change now and then (EVT settings -> refresh -> renderAll). A box the user has typed in
+  // (dirty) or is typing in (focused) is left exactly as it is; only its "edited/default" label and Reset button follow the
+  // watch. forceId = rebuild that one box anyway (after its own Save or Reset).
+  function renderWelcome(forceId) {
+    const w = st.s && st.s.welcome, max = P.WELCOME.max, list = $('#welList');
+    $('#welOld').hidden = !st.s || !!w;
+    $('#welState').textContent = w ? `up to ${max} characters` : '';
+    if (!w) { list.innerHTML = ''; for (const t of P.WELCOME.ids) welDirty[t] = false; return; }
+    for (const t of P.WELCOME.ids) {
+      const old = list.querySelector(`.welrow[data-wel="${t}"]`), oldTa = old && old.querySelector('textarea');
+      if (old && oldTa && t !== forceId && (welDirty[t] || document.activeElement === oldTa)) {
+        old.querySelector('.welmeta span:last-child').textContent = w[t].custom ? 'edited' : 'default';
+        old.querySelector(`[data-wreset="${t}"]`).disabled = !w[t].custom;
+        if (welDirty[t]) {                                   // the watch's saved text may have changed under it: is it still different?
+          welDirty[t] = P.cleanWelcome(oldTa.value) !== w[t].text;
+          old.querySelector(`[data-wsave="${t}"]`).disabled = !welDirty[t] || !P.cleanWelcome(oldTa.value);
+        }
+        continue;
+      }
+      const tmp = document.createElement('div'); tmp.innerHTML = welRowHtml(t, w, max);
+      const row = tmp.firstElementChild;
+      if (old) old.replaceWith(row); else list.appendChild(row);
+      wireWelRow(t, max);
+    }
+  }
+  async function welcomeSave(t) {
+    const ta = $('#wel-' + t), v = P.cleanWelcome(ta.value);
+    if (!v) { toast('Type a message first', true); return false; }
+    await run(P.cmd.welcomeSet(t, ta.value.trim()), 'Saved');
+    st.s.welcome[t].text = v; st.s.welcome[t].custom = 1; welDirty[t] = false; renderWelcome(t);
+    return true;
+  }
+  $('#welList').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b || b.disabled || !st.s) return;
+    try {
+      if (b.dataset.wsave) await welcomeSave(b.dataset.wsave);
+      else if (b.dataset.wreset) {
+        const t = b.dataset.wreset;
+        if (!confirm(`Put the ${P.WELCOME.names[t]} welcome back to its default message?`)) return;
+        await run(P.cmd.welcomeReset(t), 'Back to the default');
+        st.s.welcome[t].text = P.parseGetText(await st.client.send('WELCOME GET ' + t)); st.s.welcome[t].custom = 0; renderWelcome(t);
+      } else if (b.dataset.wshow) {
+        const t = b.dataset.wshow;
+        if (welDirty[t] && !(await welcomeSave(t))) return;
+        await run(P.cmd.welcomeShow(t), st.demo ? 'Demo watch: it would show the welcome now' : 'Showing it on the watch');
+      }
+    } catch (err) { /* run() already showed the error */ }
+  });
+
+  // ------------------------------------------------------------ time
+  function tick() {
+    const now = new Date();
+    $('#phoneTime').textContent = now.toTimeString().slice(0, 8);
+    $('#phoneDate').textContent = now.toDateString();
+    $('#zone').textContent = P.localZone();
+    if (st.s && st.s.time.valid) {
+      const w = new Date((st.s.time.local + (Date.now() - st.fetchedAt) / 1000) * 1000);
+      $('#watchTime').textContent = `${pad(w.getUTCHours())}:${pad(w.getUTCMinutes())}:${pad(w.getUTCSeconds())}`;
+      $('#watchDate').textContent = w.toUTCString().slice(0, 16);
+    } else { $('#watchTime').textContent = st.s ? 'not set' : '--:--:--'; $('#watchDate').textContent = ''; }
+  }
+  setInterval(tick, 1000);
+  async function syncTime(quiet) {
+    const zone = P.localZone(), tz = P.posixTz(zone, new Date().getFullYear());
+    const r = await run(P.cmd.time(Math.round(Date.now() / 1000), tz), quiet ? '' : 'Watch time set');
+    if (st.s) { st.s.time.local = Math.round(Date.now() / 1000) + (+r.split(' ')[1] || 0); st.s.time.valid = 1; st.s.time.tz = tz; st.fetchedAt = Date.now(); renderStatus(); }
+    tick();
+  }
+  $('#btnSync').addEventListener('click', () => syncTime(false).catch(() => {}));
+  $('#autoSync').checked = store.get('autoSync', '1') === '1';
+  $('#autoSync').addEventListener('change', e => store.set('autoSync', e.target.checked ? '1' : '0'));
+
+  // ------------------------------------------------------------ status / misc
+  function renderStatus() {
+    const s = st.s, pct = s.batt.pct;
+    $('#battPct').textContent = pct >= 0 ? pct + '%' : '--';
+    $('#battBar').style.width = Math.max(0, pct) + '%';
+    $('#battMv').textContent = s.batt.mv ? `${(s.batt.mv / 1000).toFixed(2)} V` + (pct >= 0 && pct <= 15 ? ' - charge soon' : '') : 'No battery sense wired';
+    const kb = n => (n / 1024).toFixed(0) + ' KB';
+    const rows = [['Firmware', s.fw], ['Face', (s.faces.find(f => f.id === s.face) || {}).name || s.face], ['Sound pack now', s.snd.packs[s.snd.now + 1] || '?'],
+      ['Sound storage', s.fs.total ? `${kb(s.fs.used)} of ${kb(s.fs.total)}` : 'not uploaded (synth only)'], ['Paired phones', s.phones],
+      ['Time zone rule', s.time.tz || 'none (sync once)'], ['Text lines', `${s.text.bless.n} / ${s.text.callout.n} / ${s.text.litany.n}`]];
+    $('#kv').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+  }
+  $('#btnUrlHere').addEventListener('click', () => { $('#url').value = location.href.split(/[?#]/)[0].replace(/index\.html$/, ''); });
+  $('#btnUrl').addEventListener('click', async () => { const r = await run(P.cmd.url($('#url').value.trim())); st.s.url = r.slice(3); $('#url').value = st.s.url; toast('QR code updated on the watch'); });
+  $('#btnForget').addEventListener('click', async () => {
+    if (!confirm('Forget every paired phone? Each one (this one too) must pair with the PIN again.')) return;
+    try { await run(P.cmd.forget(), 'Phones forgotten'); } catch (e) { return; }
+    // The watch also signs THIS connection out (watchcmd.cpp: s.authed = s.trusted), so any further command
+    // would be refused: forget the saved token and ask for a PIN again, like the scanner page does.
+    store.set(tokenKey(), ''); store.set('token.last', ''); st.s = null; $('#pinbox').hidden = false; setPill();
+    location.hash = '#connect';
+    if (st.demo) { const pin = st.mock.startPairing(); toast(pin ? 'Phones forgotten. Demo PIN ' + pin : 'Phones forgotten. Pairing is locked for a few minutes (too many wrong PINs).'); }
+    else toast('Phones forgotten. On the watch open Menu > Phone > Pair for a new PIN.');
+  });
+  $('#btnStop').addEventListener('click', () => run(P.cmd.stop()).catch(() => {}));
+
+  // colour reference (theme_config.h values)
+  const PAL = { '40K Cogitator': [['BRASS', '#c9963e'], ['RED', '#b21612'], ['PARCH', '#e2cda0'], ['SLATE', '#160505'], ['EYE', '#ff281e'], ['GRAV', '#78c8ff']],
+    'Titanfall HUD': [['CYAN', '#28dcff'], ['ORANGE', '#ff8214'], ['WHITE', '#e1f5ff'], ['NAVY', '#02080e'], ['PANEL', '#041620'], ['OPTIC', '#3ce6ff']],
+    '24H Standard': [['WHITE', '#f0f0ec'], ['ACCENT', '#ff4632'], ['SUN', '#ffbe3c'], ['LABEL', '#96989c'], ['GREY', '#46484c'], ['BG', '#000000']] };
+  $('#palettes').innerHTML = Object.entries(PAL).map(([n, cs]) => `<h3 style="font-size:14px;margin-top:8px">${n}</h3><div class="swatches">${cs.map(([k, c]) => `<span title="${k} ${c}" style="background:${c}"></span>`).join('')}</div>`).join('');
+
+  // Web Bluetooth availability
+  const hasBt = !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+  if (!hasBt) {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    $('#nobt').hidden = false;
+    $('#nobt').innerHTML = ios
+      ? '<b>iPhone / iPad:</b> Safari has no Web Bluetooth. Open this page in the free <b>Bluefy</b> browser (App Store) to connect. The demo works here.'
+      : (!window.isSecureContext ? 'Web Bluetooth needs <b>https://</b> or <b>localhost</b>. Open the hosted page (GitHub Pages) instead of this address.'
+        : 'This browser has no Web Bluetooth. Use <b>Chrome</b> or <b>Edge</b> on Android, Windows, macOS, Linux or ChromeOS. The demo works here.');
+    $('#btnConnect').disabled = true;
+  }
+
+  // PWA: offline cache + install button (only on https / localhost)
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#installCard').hidden = false; });
+  $('#btnInstall').addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('#installCard').hidden = true; });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') && !qs.has('nosw')) {
+    // A new service worker takes over by itself (sw.js: skipWaiting + claim). Reloading would drop the Bluetooth link, so just offer it.
+    // The worker that takes over tells the pages it controls its version (sw.js activate); a page older than that offers a reload.
+    navigator.serviceWorker.addEventListener('message', e => {
+      const d = e.data;
+      if (d && d.type === 'sw-version' && d.version && d.version !== PAGE_VERSION) { $('#btnUpd').hidden = false; log('a new version of this page is ready (' + d.version + ')'); }
+    });
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      const look = () => { try { reg.update().catch(() => {}); } catch (e) { /* offline */ } };
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') look(); });
+      setInterval(look, 3600000);
+    }).catch(err => log('offline cache not available: ' + err.message));
+  }
+  $('#btnUpd').addEventListener('click', () => location.reload());
+  $('#verTxt').textContent = PAGE_VERSION;
+
+  // ------------------------------------------------------------ start
+  const hasBtEarly = !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
+  setTheme(qs.get('theme') || store.get('theme', 'std'), false);
+  renderText(); setPill(); tick(); show(location.hash);
+  if (qs.has('demo')) startDemo().then(() => show(location.hash)).catch(e => toast(e.message, true));
+  else if (hasBtEarly) autoReconnect().catch(() => {});
+
+  // ------------------------------------------------------------ Sound Lab
+  const SL = window.SoundLab;
+  const lab = { ctx: null, node: null, playing: '', cache: {}, src: null, out: null, clips: {}, watch: null, ready: false };
+  const PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+  const STOP = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg>';
+  const FW_NAMES = { 'std/alarm': 'STD CHIME', 'std/alert': 'STD BELL', '40k/alarm': '40K CLAXON', '40k/alert': '40K ALERT', '40k/hour': '40K CANT', '40k/voice': '40K VOX',
+    'tf/alarm': 'TF CORE', 'tf/alert': 'TF CHIRP', 'tf/hour': 'TF HUD', 'tf/voice': 'TF VOX' };
+  const kb = n => (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB';
+  const secs = n => n.toFixed(n < 10 ? 2 : 1) + ' s';
+
+  // -- clip storage in this browser (IndexedDB; falls back to memory)
+  const idb = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      try { const r = indexedDB.open('watchmk1-lab', 1); r.onupgradeneeded = () => r.result.createObjectStore('clips', { keyPath: 'path' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+      catch (e) { rej(e); }
+    }));
+    const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('clips', mode); const q = fn(t.objectStore('clips')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+    return { all: () => tx('readonly', s => s.getAll()), put: c => tx('readwrite', s => s.put(c)), del: p => tx('readwrite', s => s.delete(p)) };
+  })();
+
+  // -- playback
+  function audioCtx() {
+    if (!lab.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) throw new Error('this browser cannot play audio'); lab.ctx = new C(); }
+    if (lab.ctx.state === 'suspended') lab.ctx.resume();
+    return lab.ctx;
+  }
+  function stopSound() {
+    if (lab.node) { try { lab.node.onended = null; lab.node.stop(); } catch (e) { /* done */ } lab.node = null; }
+    lab.playing = ''; $$('.play.on').forEach(b => { b.classList.remove('on'); b.innerHTML = PLAY; });
+  }
+  // x = Float32Array at rate; scale = watch volume factor
+  function playSamples(x, rate, scale, key) {
+    stopSound();
+    if (!x || !x.length) { toast('Nothing to play', true); return; }
+    const ctx = audioCtx();
+    let y = $('#labSpk').checked ? SL.speaker(x, rate) : x;
+    const buf = ctx.createBuffer(1, y.length, rate), ch = buf.getChannelData(0);
+    for (let i = 0; i < y.length; i++) ch[i] = Math.max(-1, Math.min(1, y[i] * scale));
+    const n = ctx.createBufferSource(); n.buffer = buf; n.connect(ctx.destination);
+    n.onended = () => { if (lab.node === n) stopSound(); };
+    n.start(); lab.node = n; lab.playing = key || '';
+    $$(`.play[data-k="${CSS.escape(key || '')}"]`).forEach(b => { b.classList.add('on'); b.innerHTML = STOP; });
+  }
+  const vol = () => +$('#labVol').value;
+  const clipScale = () => SL.GAIN_Q8[vol()] / 128;          // vol 5 = as stored (watch plays clips at 128/256)
+  async function wavFloat(u8) { const info = SL.watchCheck(u8); if (info.err) throw new Error('WAV: ' + info.error); return { x: SL.wavSamples(u8, info), rate: info.rate }; }
+  async function shippedWav(key) {
+    if (!lab.cache[key]) lab.cache[key] = await SL.inflate(window.WATCH_SOUNDS.files[key].z);
+    return lab.cache[key];
+  }
+  // Play what the watch would play for a plan {path, synth}.
+  async function playPlan(plan, key) {
+    if (lab.playing === key) { stopSound(); return; }
+    try {
+      if (plan.path && plan.path.startsWith('/user/') && lab.clips[plan.path]) { const f = await wavFloat(lab.clips[plan.path].wav); return playSamples(f.x, f.rate, clipScale(), key); }
+      if (plan.path && plan.path.startsWith('/snd/')) { const f = await wavFloat(await shippedWav(plan.path.slice(5, -4))); return playSamples(f.x, f.rate, clipScale(), key); }
+      if (plan.synth >= 0) return playSamples(SL.synth(plan.synth, SL.SYNTH_AMP[vol()] * 2), SL.SYNTH_RATE, 1, key);
+      toast('Silent: this one has no sound (no voice clip)');
+    } catch (e) { toast(e.message, true); }
+  }
+  const have = p => (p.startsWith('/snd/') && window.WATCH_SOUNDS && !!window.WATCH_SOUNDS.files[p.slice(5, -4)]) || !!lab.clips[p];
+  const playBtn = (k, label) => `<button class="play ghost" data-k="${esc(k)}" aria-label="Play ${esc(label)}">${PLAY}</button>`;
+
+  // -- built-in sounds by pack
+  function loadSounds() {
+    if (window.WATCH_SOUNDS) return Promise.resolve();
+    return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'sounds.js'; s.onload = res; s.onerror = () => rej(new Error('sounds.js missing')); document.head.appendChild(s); });
+  }
+  function renderPacks() {
+    if (!window.WATCH_SOUNDS) return;
+    const rows = [];
+    for (const pk of ['std', '40k', 'tf']) {
+      const items = SL.ROLES.map(r => {
+        const plan = SL.rolePlan(pk, r, have), key = `${pk}/${r}`, mine = plan.path && plan.path.startsWith('/user/');
+        const sub = mine ? 'your clip' : plan.path ? (FW_NAMES[key] || 'pack sound') + ' · ' + secs((window.WATCH_SOUNDS.files[key].bytes - 44) / 32000) : plan.synth >= 0 ? 'built-in tone ' + SL.SYNTH_NAMES[plan.synth] : 'none (silent)';
+        return `<div class="snd"><div class="n"><b>${SL.ROLE_NAMES[r]}${mine ? '<span class="tag">yours</span>' : ''}</b><small>${esc(sub)}</small></div>${plan.path || plan.synth >= 0 ? playBtn('role:' + key, SL.ROLE_NAMES[r]) : ''}</div>`;
+      }).join('');
+      rows.push(`<details class="labgrp" ${pk === 'std' ? 'open' : ''}><summary>${SL.PACK_NAMES[pk]} pack<small>${pk.toUpperCase()}</small></summary>${items}</details>`);
+    }
+    rows.push(`<details class="labgrp"><summary>Built-in tones<small>BEEPS pack + fallbacks</small></summary>${SL.SYNTH_NAMES.map((n, i) =>
+      `<div class="snd"><div class="n"><b>${n}</b><small>${['crisp double beep', 'rising three-note chime', 'two-tone horn', 'fast rising chirps', 'key click'][i]}</small></div>${playBtn('synth:' + i, n)}</div>`).join('')}</details>`);
+    $('#labPacks').innerHTML = rows.join('');
+    $$('#labPacks .play').forEach(b => b.addEventListener('click', () => {
+      const [kind, k] = b.dataset.k.split(':');
+      if (kind === 'synth') return playPlan({ synth: +k }, b.dataset.k);
+      const [pk, r] = k.split('/'); playPlan(SL.rolePlan(pk, r, have), b.dataset.k);
+    }));
+  }
+  // -- alarms: what each plays with the current pack
+  function renderLabAlarms() {
+    const box = $('#labAlarms');
+    if (!st.s) { box.innerHTML = '<p class="hint">Connect the watch or tap <b>Try demo</b> on Connect to hear what each of your alarms plays.</p>'; return; }
+    const pack = SL.packInUse(st.s.snd.pack, st.s.face), A = st.s.alarms;
+    const used = A.map((a, i) => [a, i]).filter(([a]) => !P.alarmFree(a));
+    const onWatch = p => lab.watch && lab.watch.files.some(f => f.p === p);
+    box.innerHTML = `<p class="sub">Pack in use: <b>${SL.PACK_NAMES[pack]}</b>${st.s.snd.pack === 0 ? ' (follows the face)' : ''}</p>` + (used.length ? used.map(([a, i]) => {
+      const plan = SL.alarmPlan(a.snd, pack, p => have(p) || onWatch(p));
+      const what = plan.path ? (plan.path.startsWith('/user/') ? (lab.clips[plan.path] ? 'your clip ' : 'your clip (on the watch) ') + plan.path.slice(6) : FW_NAMES[plan.path.slice(5, -4)] || plan.path) : 'tone ' + SL.SYNTH_NAMES[plan.synth];
+      return `<div class="snd"><div class="n"><b>${fmtTime(a.h, a.m)} · ${P.daysText(a.days)}${a.on ? '' : ' (off)'}</b><small>${esc(soundName(a.snd))} → ${esc(what)}</small></div>${playBtn('alarm:' + i, 'alarm ' + (i + 1))}</div>`;
+    }).join('') : '<p class="hint">No alarms set yet (Alarms section).</p>');
+    $$('#labAlarms .play').forEach(b => b.addEventListener('click', () => {
+      const a = st.s.alarms[+b.dataset.k.split(':')[1]], pk = SL.packInUse(st.s.snd.pack, st.s.face);
+      const plan = SL.alarmPlan(a.snd, pk, have);
+      playPlan(plan, b.dataset.k);
+    }));
+  }
+
+  // -- converter
+  function slotOptions() {
+    const groups = {};
+    for (const s of SL.slots()) (groups[s.group] = groups[s.group] || []).push(s);
+    $('#labSlot').innerHTML = Object.entries(groups).map(([g, list]) => `<optgroup label="${esc(g)}">${list.map(s => `<option value="${s.path}">${esc(s.label)}${lab.clips[s.path] ? ' ✓' : ''}</option>`).join('')}</optgroup>`).join('');
+  }
+  // Very long files: decoding turns every second into ~350 KB of memory per channel, which can crash a phone's tab.
+  const LAB_MAX_BYTES = 25 * 1024 * 1024, LAB_MAX_SEC = 300, LAB_WARN_SEC = 60;
+  async function loadFile(file) {
+    try {
+      if (file.size > LAB_MAX_BYTES) { toast(`That file is ${(file.size / 1048576).toFixed(0)} MB: too big to convert here (limit ${LAB_MAX_BYTES / 1048576} MB). Cut the part you want out of it first.`, true); return; }
+      const ab = await file.arrayBuffer(), ctx = audioCtx();
+      const buf = await new Promise((res, rej) => { const p = ctx.decodeAudioData(ab.slice(0), res, rej); if (p && p.catch) p.catch(rej); });
+      if (buf.duration > LAB_MAX_SEC) { toast(`That recording is ${Math.round(buf.duration / 60)} minutes long: too long (limit ${LAB_MAX_SEC / 60} minutes, and about 25 seconds already fills the watch's default storage). Cut the part you want out of it first.`, true); return; }
+      const chans = []; for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c).slice());
+      lab.src = { name: file.name, size: file.size, chans, rate: buf.sampleRate, seconds: buf.duration };
+      const orig = SL.watchCheck(new Uint8Array(ab.slice(0, Math.min(ab.byteLength, 4096))).length ? new Uint8Array(ab) : new Uint8Array(0));
+      lab.src.long = buf.duration > LAB_WARN_SEC;
+      lab.src.note = /\.wav$/i.test(file.name) ? (orig.err ? `as it is, the watch would not play this WAV (${orig.error}) and would beep instead` : `this WAV would play as is (${orig.rate} Hz, ${orig.channels === 1 ? 'mono' : 'stereo'}, ${orig.bits}-bit)`) : '';
+      $('#labStart').max = $('#labEnd').max = String(Math.round(buf.duration * 100));
+      $('#labStart').value = '0'; $('#labEnd').value = $('#labEnd').max;
+      $('#labEdit').hidden = false;
+      if (!$('#labSlot').value || lab.clips[$('#labSlot').value]) {
+        const free = SL.slots().find(s => /custom/.test(s.path) && !lab.clips[s.path]); if (free) $('#labSlot').value = free.path;
+      }
+      reconvert();
+    } catch (e) { toast('Could not read that file: ' + (e && e.message || 'unknown format'), true); }
+  }
+  function reconvert() {
+    if (!lab.src) return;
+    const s = lab.src, a = +$('#labStart').value / 100, b = Math.max(a + 0.01, +$('#labEnd').value / 100);
+    $('#labStartv').textContent = secs(a); $('#labEndv').textContent = secs(b);
+    lab.out = SL.convert(s.chans, s.rate, { start: a, end: b, trim: $('#labTrim').checked, normalize: $('#labNorm').checked });
+    const ck = lab.out.samples.length ? SL.watchCheck(lab.out.wav) : { err: 9, error: 'nothing louder than the silence threshold' };
+    lab.out.ok = !ck.err;
+    $('#labSrc').textContent = `${s.name} · ${secs(s.seconds)} · ${s.chans.length === 1 ? 'mono' : s.chans.length + ' channels'} · ${kb(s.size)}${s.note ? ' — ' + s.note : ''}${s.long ? ' — LONG FILE: about 25 s already fills the default storage of the watch, so drag Start and End to the part you want' : ''}`;
+    const fit = budget([{ path: $('#labSlot').value, size: lab.out.wav.length }], $('#labSlot').value);
+    $('#labInfo').innerHTML = lab.out.ok
+      ? `Converted: <b>${secs(lab.out.seconds)}</b>, <b>${kb(lab.out.wav.length)}</b>, 16 kHz mono 16-bit${Math.abs(lab.out.gainDb) > 0.05 ? `, level ${lab.out.gainDb > 0 ? '+' : ''}${lab.out.gainDb.toFixed(1)} dB` : ''}. Watch check: <b>OK</b>. ${fit.fits ? `Fits (${kb(fit.free)} left after it).` : `<b style="color:var(--bad)">Too big for the ${SL.PARTITIONS[$('#labPart').value].name} storage: trim it, or use the big partition.</b>`}`
+      : `<b style="color:var(--bad)">Nothing left to save (${ck.error}).</b>`;
+    $('#labSave').disabled = !lab.out.ok || !fit.fits;
+    drawWave();
+  }
+  function drawWave() {
+    const cv = $('#labWave'), g = cv.getContext('2d'), s = lab.src; if (!s) return;
+    const W = cv.width, H = cv.height, x = s.chans[0], n = x.length, css = getComputedStyle(document.documentElement);
+    g.clearRect(0, 0, W, H);
+    const a = +$('#labStart').value / 100 / s.seconds * W, b = +$('#labEnd').value / 100 / s.seconds * W;
+    g.fillStyle = css.getPropertyValue('--panel').trim() || '#111'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(128,128,128,.18)'; g.fillRect(0, 0, a, H); g.fillRect(b, 0, W - b, H);
+    g.strokeStyle = css.getPropertyValue('--accent').trim() || '#f44'; g.beginPath();
+    for (let px = 0; px < W; px++) {
+      let lo = 0, hi = 0; const i0 = Math.floor(px * n / W), i1 = Math.floor((px + 1) * n / W);
+      for (let i = i0; i < i1; i++) { if (x[i] < lo) lo = x[i]; if (x[i] > hi) hi = x[i]; }
+      g.moveTo(px + .5, H / 2 - hi * H / 2); g.lineTo(px + .5, H / 2 - lo * H / 2 + 1);
+    }
+    g.stroke();
+    g.fillStyle = css.getPropertyValue('--accent2').trim() || '#fc4'; g.fillRect(a - 1, 0, 2, H); g.fillRect(b - 1, 0, 2, H);
+  }
+  // -- storage budget: shipped sounds + kept clips (+ a candidate replacing its slot)
+  function budget(extra = [], replacing) {
+    const W = window.WATCH_SOUNDS, sh = W ? { blocks: W.fsShippedBlocks, dirs: W.fsShippedDirs } : { blocks: 167, dirs: ['/snd/40k', '/snd/std', '/snd/tf', '/user'] };
+    const clips = Object.values(lab.clips).filter(c => c.path !== replacing).map(c => ({ path: c.path, size: c.wav.length })).concat(extra);
+    return SL.fsEstimate(sh, clips, SL.PARTITIONS[$('#labPart').value].bytes);
+  }
+  function renderClips() {
+    slotOptions();
+    const b = budget(), pct = Math.min(100, 100 * b.used / b.total);
+    $('#labMeter span').style.width = pct.toFixed(1) + '%'; $('#labMeter').classList.toggle('full', !b.fits);
+    $('#labSpace').textContent = `${kb(b.used)} of ${kb(b.total)} used by the shipped sounds${Object.keys(lab.clips).length ? ' and your clips' : ''} — ${b.fits ? kb(b.free) + ' free' : 'over by ' + kb(-b.free)}.`;
+    const list = Object.values(lab.clips).sort((x, y) => x.path.localeCompare(y.path));
+    $('#labList').innerHTML = list.map(c => {
+      const slot = SL.slots().find(s => s.path === c.path);
+      return `<div class="snd clip" data-p="${c.path}"><div class="n"><b>${esc(slot ? slot.label : c.path)}</b><small><code>data${c.path}</code> · ${secs((c.wav.length - 44) / 32000)} · ${kb(c.wav.length)}${c.from ? ' · from ' + esc(c.from) : ''}</small><div class="prog" hidden><span></span></div></div>
+        <div class="acts">${playBtn('clip:' + c.path, c.path)}<button class="ghost small" data-dl="${c.path}">Download</button><button class="small" data-up="${c.path}" ${st.client && st.s ? '' : 'disabled'}>Send to watch</button><button class="warn small" data-rm="${c.path}" aria-label="Remove">✕</button></div></div>`;
+    }).join('') || '<p class="hint">No clips kept yet.</p>';
+    $$('#labList .play').forEach(b => b.addEventListener('click', () => playPlan({ path: b.dataset.k.slice(5) }, b.dataset.k)));
+    $$('[data-dl]').forEach(b => b.addEventListener('click', () => download(lab.clips[b.dataset.dl].wav, b.dataset.dl.split('/').pop(), 'audio/wav')));
+    $$('[data-rm]').forEach(b => b.addEventListener('click', async () => { delete lab.clips[b.dataset.rm]; await idb.del(b.dataset.rm).catch(() => {}); labRender(); }));
+    $$('[data-up]').forEach(b => b.addEventListener('click', () => sendClip(b.dataset.up, b)));
+    $('#labZip').disabled = !list.length;
+  }
+  function download(u8, name, type) {
+    const url = URL.createObjectURL(new Blob([u8], { type })), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    lab.lastDownload = { name, bytes: u8.length };
+  }
+  // -- over Bluetooth (FILE commands); faster writes when the phone allows them
+  async function sendClip(path, btn) {
+    if (!st.client || !st.s) { toast('Connect the watch first', true); return; }
+    const row = btn.closest('.snd'), bar = row.querySelector('.prog'), c = lab.clips[path];
+    bar.hidden = false; btn.disabled = true;
+    const t = st.t;
+    try {
+      if (t.fast) await t.fast(st.client);
+      const r = await SL.upload(st.client, path, c.wav, t.chunkMax || 20, (d, n) => { bar.firstElementChild.style.width = (100 * d / n).toFixed(1) + '%'; });
+      toast('On the watch: ' + r.slice(3));
+      await refreshWatchFiles();
+    } catch (e) { toast('Send failed: ' + e.message, true); }
+    finally { if (t.slow) t.slow(); btn.disabled = false; setTimeout(() => { bar.hidden = true; }, 800); }
+  }
+  async function refreshWatchFiles() {
+    if (!st.client || !st.s) { lab.watch = null; $('#labWatchBox').hidden = true; return; }
+    try { lab.watch = P.parseJson(await st.client.ok('FILE LIST')); } catch (e) { lab.watch = null; }
+    $('#labWatchBox').hidden = !lab.watch;
+    if (!lab.watch) return;
+    $('#labWatch').innerHTML = (lab.watch.files.length ? lab.watch.files.map(f => `<div class="snd"><div class="n"><b>${esc(f.p.slice(6))}</b><small>${kb(f.s)}</small></div><button class="warn small" data-wdel="${esc(f.p)}">Delete</button></div>`).join('')
+      : '<p class="hint">None of your clips are on the watch.</p>') + `<p class="hint">${kb(lab.watch.free)} free on the watch.</p>`;
+    $$('[data-wdel]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Delete ' + b.dataset.wdel + ' from the watch?')) return; await run('FILE DEL ' + b.dataset.wdel, 'Deleted'); refreshWatchFiles(); }));
+    renderLabAlarms();
+  }
+  function labRender() { if (!lab.ready) return; renderPacks(); renderLabAlarms(); renderClips(); }
+
+  // -- wiring
+  $('#labPart').innerHTML = Object.entries(SL.PARTITIONS).map(([k, p]) => `<option value="${k}">${esc(p.name)}</option>`).join('');
+  $('#labPart').value = store.get('labPart', 'std');
+  $('#labPart').addEventListener('change', () => { store.set('labPart', $('#labPart').value); renderClips(); reconvert(); });
+  $('#labVol').addEventListener('input', () => { $('#labVolv').textContent = $('#labVol').value + '/5'; });
+  $('#labSpk').checked = store.get('labSpk', '0') === '1';
+  $('#labSpk').addEventListener('change', () => store.set('labSpk', $('#labSpk').checked ? '1' : '0'));
+  $('#labStop').addEventListener('click', stopSound);
+  $('#labFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
+  ['labStart', 'labEnd'].forEach(id => $('#' + id).addEventListener('input', () => {
+    if (+$('#labEnd').value <= +$('#labStart').value) { if (id === 'labStart') $('#labStart').value = String(+$('#labEnd').value - 1); else $('#labEnd').value = String(+$('#labStart').value + 1); }
+    clearTimeout(lab.tm); lab.tm = setTimeout(reconvert, 120); drawWave();
+  }));
+  ['labTrim', 'labNorm', 'labSlot'].forEach(id => $('#' + id).addEventListener('change', reconvert));
+  $('#labPlayIn').addEventListener('click', () => { const s = lab.src; if (!s) return; const a = +$('#labStart').value / 100, b = +$('#labEnd').value / 100; playSamples(SL.mixDown(s.chans).subarray(Math.floor(a * s.rate), Math.floor(b * s.rate)), s.rate, 1, 'in'); });
+  $('#labPlayOut').addEventListener('click', () => { if (lab.out && lab.out.ok) playSamples(lab.out.samples, SL.RATE, clipScale(), 'out'); });
+  $('#labSave').addEventListener('click', async () => {
+    if (!lab.out || !lab.out.ok) return;
+    const path = $('#labSlot').value;
+    if (lab.clips[path] && !confirm(`Replace your clip for ${path}?`)) return;
+    const c = { path, wav: lab.out.wav, from: lab.src.name, at: Date.now() };
+    lab.clips[path] = c; await idb.put(c).catch(() => toast('Kept for now (this browser does not allow saving)', true));
+    toast('Kept as ' + path.slice(6)); labRender();
+  });
+  $('#labZip').addEventListener('click', () => {
+    const files = Object.values(lab.clips).map(c => ({ name: c.path.slice(1), data: c.wav }));
+    download(SL.zip(files), 'watch_user_sounds.zip', 'application/zip');
+  });
+  (async () => {
+    try { for (const c of await idb.all()) lab.clips[c.path] = c; } catch (e) { /* private mode: memory only */ }
+    try { await loadSounds(); } catch (e) { $('#labPacks').innerHTML = '<p class="hint">The built-in watch sounds (sounds.js) are not next to this page. Your own clips still work.</p>'; }
+    lab.ready = true; labRender();
+  })();
+  window.__lab = lab;            // for tests/test_webapp_ui.mjs
+  window.__labRefresh = watchToo => { labRender(); if (watchToo || !st.s) refreshWatchFiles(); };
+
+})();
+</script>
+</body>
+</html>

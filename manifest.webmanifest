@@ -1,0 +1,17 @@
+{
+  "name": "Watch MK1 settings",
+  "short_name": "Watch MK1",
+  "description": "Set the time, faces, alarms, sounds, display and text lines of the Watch MK1 over Bluetooth.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#02080e",
+  "theme_color": "#02080e",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

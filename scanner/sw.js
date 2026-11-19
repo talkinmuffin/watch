@@ -6,7 +6,7 @@
 // version can not be filled with the old files; the page shows a "new version" prompt when this worker takes over.
 // v4: page-open auto-reconnect; no change to what is cached.
 // v5: Brightness drives the real backlight on a screen that has a backlight pin (page note follows GET "backlight"); no change to what is cached.
-const VERSION = 'hbscan-v5';
+const VERSION = 'hbscan-v6';
 const PREFIX = 'hbscan-';
 // Only the app's own page is ever kept as the offline page (v2: before this ANY page in scope was, so a 404
 // or an odd address replaced it).

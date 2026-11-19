@@ -56,6 +56,7 @@ input[type=range]{width:100%;accent-color:var(--accent);height:34px;margin:0}
 .sub{color:var(--soft);font-size:13px}
 .hint{color:var(--soft);font-size:13px;margin:6px 0 0}
 .warnnote{color:var(--accent2);font-size:13px;margin:4px 0 0}
+.welwarn{color:var(--accent2);font-size:13px;margin:4px 0 0}
 button{font:700 14px var(--mono);text-transform:uppercase;letter-spacing:.05em;min-height:44px;padding:0 14px;border-radius:var(--radius);border:1px solid var(--accent);background:var(--accent);color:var(--bg);cursor:pointer}
 button.ghost{background:transparent;color:var(--accent)}
 button.warn{background:transparent;color:var(--bad);border-color:var(--bad)}
@@ -97,6 +98,11 @@ a{color:var(--accent)}
 .linkcard{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
 .linkcard svg{width:34px;height:34px;flex:none}
 .muted{opacity:.55}
+.welrow{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.welrow:first-of-type{border-top:0;padding-top:0}
+.welrow label{display:block;font-weight:600;margin-bottom:6px}
+.welrow textarea{width:100%;min-height:62px;font:16px/1.35 var(--font);color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;resize:none;padding:8px 10px}
+.welrow .welmeta{display:flex;justify-content:space-between;color:var(--soft);font-size:12px;margin:4px 0 2px}
 </style>
 </head>
 <body>
@@ -158,6 +164,13 @@ a{color:var(--accent)}
     <h2>Colours <small>tap a swatch</small></h2>
     <div id="cols"></div>
     <p class="hint">The screen shows 65,536 colours, so each pick is rounded to the nearest one it can show (the hex code shows the result).</p>
+  </div>
+  <div class="card" id="welcomeCard">
+    <h2>Boot welcome <small id="welState"></small></h2>
+    <p class="hint">Shown for about 3 seconds each time the scanner is switched on, in the style of the theme it is using (custom colours use the Blue phosphor message). Press the BOOT button on the scanner (or the pair button, if you fitted one) to skip it. <b>Do not hold BOOT while switching the scanner on</b> (that starts the programming mode); a quick press once the welcome is showing is fine. It is skipped after a crash restart, and the 2-minute Bluetooth window is not shortened by it.</p>
+    <p class="welwarn" id="welNone">Connect to your scanner to read and change its welcome messages.</p>
+    <p class="welwarn" id="welOld" hidden>This scanner does not have the welcome screen yet. Update its firmware with the new files, then reconnect.</p>
+    <div id="welList"></div>
   </div>
 </section>
 
@@ -304,8 +317,51 @@ a{color:var(--accent)}
   P.NUM = [['range', 1000, 6000], ['fov', 40, 120], ['sweep', 500, 6000], ['linger', 200, 5000], ['bright', 10, 100],
     ['rot', 0, 3], ['mirror', 0, 1], ['close', 0, 6000], ['bootpair', 0, 3]];
   P.LIMIT = {}; for (const [k, lo, hi] of P.NUM) P.LIMIT[k] = [lo, hi];
-  P.PRESET_IDS = ['cyan', 'cod', 'mech', 'titan', 'night'];
-  P.PRESET_NAME = { cyan: 'Blue phosphor', cod: 'Classic green', mech: 'Auspex (Mechanicus)', titan: 'Pilot HUD (Titanfall)', night: 'Red night' };
+  P.PRESET_IDS = ['cyan', 'cod', 'mech', 'titan', 'night', 'halo'];
+  P.PRESET_NAME = { cyan: 'Blue phosphor', cod: 'Classic green', mech: 'Auspex (Mechanicus)', titan: 'Pilot HUD (Titanfall)', night: 'Red night', halo: 'Motion tracker (Halo)' };
+  // Boot welcome messages (mirror of scan_welcome.h / scan_welcome.cpp). One per theme, saved on the scanner.
+  P.WELCOME = { max: 60, ms: 3000, ids: P.PRESET_IDS };
+  P.WELCOME_DEFAULT = { cyan: 'Heartbeat scanner ready.', cod: 'Heartbeat sensor online.', mech: 'Auspex awakened. The Omnissiah sees all.',
+    titan: 'Proximity sensor online, Pilot.', night: 'Scanner ready. Night mode.', halo: 'Motion tracker online, Spartan.' };
+  P.chars = s => [...s].length;                 // the scanner counts characters, not bytes
+  // What the scanner stores for a welcome message (mirror of ScanWelcome::clean, which follows the watch's WelcomeText::clean):
+  // control chars and runs of spaces -> one space, curly quotes / dashes -> plain ones, characters the screen fonts lack are
+  // dropped, 60 characters at most (a longer text is cut with the ellipsis character).
+  P.cleanWelcome = function (s) {
+    const MAP = { 0x2018: 0x27, 0x201C: 0x22, 0x201D: 0x22, 0x2013: 0x2d, 0x2014: 0x2d, 0x2212: 0x2d, 0xA0: 0x20, 0x7C: 0x20 };
+    const drawable = c => (c >= 0x20 && c <= 0x7E) || c === 0x2026 || c === 0xB7 || c === 0x2019 || c === 0xB0;
+    const max = P.WELCOME.max, out = [];
+    let cut = false;
+    for (const ch of String(s)) {
+      let c = ch.codePointAt(0);
+      if (MAP[c] !== undefined) c = MAP[c];
+      if (c < 0x20 || c === 0x7F) c = 0x20;
+      if (!drawable(c)) continue;
+      if (c === 0x20) { if (!out.length || out[out.length - 1] === ' ' || out.length >= max) continue; }
+      else if (out.length >= max) { cut = true; break; }
+      out.push(String.fromCharCode(c));
+    }
+    while (out.length && out[out.length - 1] === ' ') out.pop();
+    if (cut) {
+      while (out.length >= max) out.pop();
+      while (out.length && out[out.length - 1] === ' ') out.pop();
+      out.push('\u2026');
+    }
+    return out.join('');
+  };
+  P.parseGetText = function (reply) {          // "OK <text>" -> text
+    if (!reply.startsWith('OK ')) throw new Error(reply);
+    return reply.slice(3);
+  };
+  P.parseWelcomeList = function (reply) {      // 'OK {"cyan":{"text":"..","custom":0},...}' -> {id: {text, custom}}
+    if (!reply.startsWith('OK ')) throw new Error(reply);
+    const j = JSON.parse(reply.slice(3)), out = {};
+    for (const id of P.WELCOME.ids) {
+      const e = j[id] || {};
+      out[id] = { text: typeof e.text === 'string' ? e.text : P.WELCOME_DEFAULT[id], custom: Number(e.custom) === 1 ? 1 : 0 };
+    }
+    return out;
+  };
   const RGB = (r, g, b) => ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
   P.rgb565 = RGB;
   // order as P.COLS; values are RGB565 like the firmware's table
@@ -323,6 +379,9 @@ a{color:var(--accent)}
     night: [RGB(0, 0, 0), RGB(10, 0, 0), RGB(58, 0, 0), RGB(106, 8, 6), RGB(22, 0, 0), RGB(42, 0, 0),
       RGB(192, 32, 16), RGB(106, 16, 8), RGB(255, 48, 24), RGB(90, 12, 6), RGB(176, 24, 8),
       RGB(255, 96, 32), RGB(255, 176, 144), RGB(96, 16, 6), RGB(255, 128, 32)],
+    halo: [RGB(3, 10, 14), RGB(14, 20, 24), RGB(26, 86, 100), RGB(84, 190, 208), RGB(8, 34, 42), RGB(30, 72, 84),
+      RGB(190, 238, 244), RGB(86, 142, 154), RGB(226, 250, 255), RGB(46, 110, 126), RGB(255, 196, 40),
+      RGB(255, 92, 40), RGB(255, 236, 200), RGB(130, 40, 16), RGB(255, 180, 0)],
   };
   P.expand = c => {
     const r5 = c >> 11, g6 = (c >> 5) & 63, b5 = c & 31;
@@ -369,6 +428,11 @@ a{color:var(--accent)}
     url: u => 'URL ' + (u || 'RESET'),
     forget: () => 'FORGET',
     bye: () => 'BYE',
+    welcomeList: () => 'WELCOME LIST',
+    welcomeGet: t => `WELCOME GET ${t}`,
+    welcomeSet: (t, s) => `WELCOME SET ${t} ${s.replace(/[\r\n]+/g, ' ')}`,
+    welcomeReset: t => `WELCOME RESET ${t}`,
+    welcomeShow: t => `WELCOME SHOW ${t}`,
   };
 
   // ---- client: one command at a time over any transport ----
@@ -431,15 +495,16 @@ a{color:var(--accent)}
       this.backlight = opts && opts.backlight ? 1 : 0;
       this.authed = false; this.fails = 0; this.pairing = false; this.pin = 0; this.tokens = [];
       this.url = P.PAGE_URL; this.s = P.defaults(); this.hangups = 0; this.trusted = false;
+      this.welcome = Object.assign({}, P.WELCOME_DEFAULT); this.welCustom = {}; this.log = [];     // log: "welcome <n>" for every SHOW
     }
     startPairing() { this.pin = 100000 + Math.floor(Math.random() * 900000); this.pairing = true; return this.pin; }
     newConnection() { this.authed = false; this.fails = 0; }
     getJson() {                                 // same key order as ScanLink::cmdGet
       const s = this.s, j = JSON.stringify;
-      let o = `{"proto":1,"fw":"1.2.0-backlight","name":"HB SCANNER","dev":"scanner","preset":${j(s.preset)},"col":{`;
+      let o = `{"proto":1,"fw":"1.3.0-welcome","name":"HB SCANNER","dev":"scanner","preset":${j(s.preset)},"col":{`;
       o += P.COLS.map(k => `${j(k)}:${j(s.col[k])}`).join(',') + '}';
       for (const [k] of P.NUM) o += `,${j(k)}:${s[k]}`;
-      o += `,"url":${j(this.url)},"phones":${this.tokens.length},"backlight":${this.backlight},"presets":${j(P.PRESET_IDS)}}`;
+      o += `,"url":${j(this.url)},"phones":${this.tokens.length},"backlight":${this.backlight},"welcome":{"max":${P.WELCOME.max},"ms":${P.WELCOME.ms}},"presets":${j(P.PRESET_IDS)}}`;
       return o;
     }
     handle(line) {
@@ -449,7 +514,7 @@ a{color:var(--accent)}
       const words = rest.split(/ +/).filter(Boolean);
       if (!verb) return err('empty');
       if (verb === 'HELLO' || verb === 'PING')
-        return ok(`{"proto":1,"fw":"1.2.0-backlight","name":"HB SCANNER","dev":"scanner","auth":${this.authed ? 1 : 0},"pairing":${this.pairing ? 1 : 0}}`);
+        return ok(`{"proto":1,"fw":"1.3.0-welcome","name":"HB SCANNER","dev":"scanner","auth":${this.authed ? 1 : 0},"pairing":${this.pairing ? 1 : 0}}`);
       if (verb === 'AUTH') {
         if (this.fails >= 5) return err('locked');
         const a = (words[0] || '').slice(0, 23);
@@ -492,12 +557,13 @@ a{color:var(--accent)}
       }
       if (verb === 'PRESET') {
         const id = (words[0] || '').slice(0, 11).toLowerCase();
-        if (!P.PRESETS[id]) return err('preset must be cyan, cod, mech, titan or night');
+        if (!P.PRESETS[id]) return err('preset must be cyan, cod, mech, titan, night or halo');
         P.COLS.forEach((k, i) => { this.s.col[k] = P.toHex(P.PRESETS[id][i]); });
         this.s.preset = id;
         return ok();
       }
       if (verb === 'DEFAULTS') { const rot = this.s.rot, mir = this.s.mirror; this.s = P.defaults(); this.s.rot = rot; this.s.mirror = mir; return ok(); }
+      if (verb === 'WELCOME') return this.welcomeCmd(rest);
       if (verb === 'URL') {
         const u = (words[0] || '').slice(0, 121);
         if (!u) return ok(this.url);
@@ -510,6 +576,23 @@ a{color:var(--accent)}
       if (verb === 'BYE') { this.hangups++; return ok(); }
       return err('unknown command');
     }
+  };
+
+  P.MockScanner.prototype.welcomeCmd = function (rest) {      // same answers as ScanLink::cmdWelcome
+    const m = /^ *(\S*) *(\S*) *([\s\S]*)$/.exec(rest), sub = m[1].toUpperCase().slice(0, 7);
+    if (sub === 'MAX') return 'OK ' + P.WELCOME.max;
+    if (sub === 'LIST') return 'OK {' + P.WELCOME.ids.map(i => `${JSON.stringify(i)}:{"text":${JSON.stringify(this.welcome[i])},"custom":${this.welCustom[i] ? 1 : 0}}`).join(',') + '}';
+    const t = m[2].slice(0, 11).toLowerCase();
+    if (!P.WELCOME.ids.includes(t)) return 'ERR theme must be cyan, cod, mech, titan, night or halo';
+    if (sub === 'GET') return 'OK ' + this.welcome[t];
+    if (sub === 'RESET') { this.welcome[t] = P.WELCOME_DEFAULT[t]; this.welCustom[t] = 0; return 'OK'; }
+    if (sub === 'SET') {
+      const c = P.cleanWelcome(m[3]);
+      if (!c) return 'ERR empty message';
+      this.welcome[t] = c; this.welCustom[t] = 1; return 'OK';
+    }
+    if (sub === 'SHOW') { this.log.push('welcome ' + P.WELCOME.ids.indexOf(t)); return 'OK'; }
+    return 'ERR unknown command';
   };
 
   // A transport that runs MockScanner through the same framing as Bluetooth.
@@ -639,7 +722,7 @@ a{color:var(--accent)}
   const P = window.ScanProto, R = window.ScanRadar;
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const qs = new URLSearchParams(location.search);
-  const PAGE_VERSION = 'v5';             // keep in step with VERSION in sw.js (tests check it)
+  const PAGE_VERSION = 'v6';             // keep in step with VERSION in sw.js (tests check it)
   const store = { get: (k, d) => { try { const v = localStorage.getItem('hbscan.' + k); return v === null ? d : v; } catch (e) { return d; } },
     set: (k, v) => { try { localStorage.setItem('hbscan.' + k, v); } catch (e) { /* private mode */ } } };
   // st.s = the settings shown (from the scanner, or the preview-only copy when not connected)
@@ -738,8 +821,83 @@ a{color:var(--accent)}
       $('#phones').textContent = st.info.phones; $('#fw').textContent = st.info.fw;
     }
     brightnessNote();
-    themePage(); stageMeta();
+    themePage(); stageMeta(); renderWelcome();
   }
+
+  // ------------------------------------------------------------ boot welcome
+  const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const welDirty = {};
+  function welRowHtml(t, w, max) {
+    return `<div class="welrow" data-wel="${t}">
+      <label for="wel-${t}">${esc(P.PRESET_NAME[t])}</label>
+      <textarea id="wel-${t}" rows="2" aria-label="Welcome message, ${esc(P.PRESET_NAME[t])}">${esc(w[t].text)}</textarea>
+      <div class="welmeta"><span id="welcnt-${t}">${P.chars(w[t].text)}/${max}</span><span>${w[t].custom ? 'edited' : 'default'}</span></div>
+      <div class="btns"><button data-wsave="${t}" disabled>Save</button><button class="ghost" data-wshow="${t}">Show on device</button><button class="warn" data-wreset="${t}"${w[t].custom ? '' : ' disabled'}>Reset</button></div></div>`;
+  }
+  function clampInput(el, max) {
+    const a = [...el.value.replace(/[\r\n]/g, ' ')];
+    if (a.length > max) { const pos = el.selectionStart; el.value = a.slice(0, max).join(''); try { el.setSelectionRange(pos, pos); } catch (e) { /* type */ } }
+    return P.chars(el.value);
+  }
+  function wireWelRow(t, max) {
+    const ta = $('#wel-' + t), save = $(`[data-wsave="${t}"]`);
+    welDirty[t] = false;
+    ta.addEventListener('input', () => {
+      const n = clampInput(ta, max); $('#welcnt-' + t).textContent = `${n}/${max}`;
+      welDirty[t] = P.cleanWelcome(ta.value) !== st.welcome[t].text; save.disabled = !welDirty[t] || !P.cleanWelcome(ta.value);   // st.welcome is replaced on every refresh: never keep an old copy
+    });
+    ta.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (!save.disabled) save.click(); } });   // one line of text
+  }
+  // A box the user has typed in (dirty) or is typing in (focused) is left exactly as it is when the page refreshes from the
+  // scanner; only its "edited/default" label and Reset button follow the scanner. forceId = rebuild that one box anyway
+  // (after its own Save or Reset).
+  function renderWelcome(forceId) {
+    const w = st.linked ? st.welcome : null, max = P.WELCOME.max, list = $('#welList');
+    $('#welNone').hidden = st.linked;
+    $('#welOld').hidden = !st.linked || !!w;
+    $('#welState').textContent = w ? `up to ${max} characters` : '';
+    if (!w) { list.innerHTML = ''; for (const t of P.WELCOME.ids) welDirty[t] = false; return; }
+    for (const t of P.WELCOME.ids) {
+      const old = list.querySelector(`.welrow[data-wel="${t}"]`), oldTa = old && old.querySelector('textarea');
+      if (old && oldTa && t !== forceId && (welDirty[t] || document.activeElement === oldTa)) {
+        old.querySelector('.welmeta span:last-child').textContent = w[t].custom ? 'edited' : 'default';
+        old.querySelector(`[data-wreset="${t}"]`).disabled = !w[t].custom;
+        if (welDirty[t]) {                                   // the saved text may have changed under it: is it still different?
+          welDirty[t] = P.cleanWelcome(oldTa.value) !== w[t].text;
+          old.querySelector(`[data-wsave="${t}"]`).disabled = !welDirty[t] || !P.cleanWelcome(oldTa.value);
+        }
+        continue;
+      }
+      const tmp = document.createElement('div'); tmp.innerHTML = welRowHtml(t, w, max);
+      const row = tmp.firstElementChild;
+      if (old) old.replaceWith(row); else list.appendChild(row);
+      wireWelRow(t, max);
+    }
+  }
+  async function welcomeSave(t) {
+    const ta = $('#wel-' + t), v = P.cleanWelcome(ta.value);
+    if (!v) { toast('Type a message first', true); return false; }
+    try { await st.client.ok(P.cmd.welcomeSet(t, ta.value.trim())); toast('Saved'); }
+    catch (e) { toast(e.message, true); return false; }
+    st.welcome[t].text = v; st.welcome[t].custom = 1; welDirty[t] = false; renderWelcome(t);
+    return true;
+  }
+  $('#welList').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b || b.disabled || !st.welcome || !st.client) return;
+    try {
+      if (b.dataset.wsave) await welcomeSave(b.dataset.wsave);
+      else if (b.dataset.wreset) {
+        const t = b.dataset.wreset;
+        if (!confirm(`Put the ${P.PRESET_NAME[t]} welcome back to its default message?`)) return;
+        await st.client.ok(P.cmd.welcomeReset(t)); toast('Back to the default');
+        st.welcome[t].text = P.parseGetText(await st.client.send(P.cmd.welcomeGet(t))); st.welcome[t].custom = 0; renderWelcome(t);
+      } else if (b.dataset.wshow) {
+        const t = b.dataset.wshow;
+        if (welDirty[t] && !(await welcomeSave(t))) return;
+        await st.client.ok(P.cmd.welcomeShow(t)); toast(st.demo ? 'Demo scanner: it would show the welcome now' : 'Showing it on the scanner');
+      }
+    } catch (err) { toast(err.message, true); }
+  });
   // What the Brightness slider does depends on the screen the scanner reports (GET "backlight"): a screen with a backlight pin is
   // dimmed by the backlight itself (saves battery); the 7-pin module only gets darker colours. Not connected: assume the 7-pin screen.
   function brightnessNote() {
@@ -927,6 +1085,10 @@ a{color:var(--accent)}
       const s = { preset: g.preset, col: g.col };
       for (const [k] of P.NUM) s[k] = Number(g[k]);     // numbers only: these reach innerHTML in stageMeta
       st.s = s;
+      st.welcome = null;                                // only a scanner that reports "welcome" has the feature
+      if (g.welcome && typeof g.welcome === 'object') {
+        try { st.welcome = P.parseWelcomeList(await st.client.send(P.cmd.welcomeList())); } catch (e) { log('welcome list: ' + e.message); }
+      }
       render();
     } catch (e) { toast('Could not read the scanner: ' + e.message, true); }
     setPill();
@@ -934,7 +1096,7 @@ a{color:var(--accent)}
   function onDisconnected() {
     log('disconnected');
     st.client = null; st.t = null; st.linked = false; $('#pinbox').hidden = true;
-    setPill(); toast('Scanner disconnected', true);
+    renderWelcome(); setPill(); toast('Scanner disconnected', true);
   }
   async function connect(pick, auto) {
     const t = new BleTransport();
@@ -982,7 +1144,7 @@ a{color:var(--accent)}
   $('#pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btnPin').click(); });
   $('#btnRefresh').addEventListener('click', () => refresh());
   $('#btnDisconnect').addEventListener('click', async () => {
-    if (st.demo) { st.client = null; st.linked = false; st.demo = false; $('#pinbox').hidden = true; setPill(); return; }
+    if (st.demo) { st.client = null; st.linked = false; st.demo = false; $('#pinbox').hidden = true; renderWelcome(); setPill(); return; }
     try { await st.client.send(P.cmd.bye()); } catch (e) { /* closing anyway */ }
     if (st.t) st.t.close();
     $('#pinbox').hidden = true;
